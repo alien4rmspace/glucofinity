@@ -46,7 +46,7 @@ npm run preview
 
 The workflow in `.github/workflows/deploy.yml` builds and publishes the static export whenever changes are pushed to `main`.
 
-In the GitHub repository settings, choose **Settings > Pages > Build and deployment > GitHub Actions** as the publishing source. The site will then be available at `https://glucofinity.github.io/` after the workflow completes.
+In the GitHub repository settings, choose **Settings > Pages > Build and deployment > GitHub Actions** as the publishing source. The site will then be available at `https://alien4rmspace.github.io/glucofinity/` after the workflow completes.
 
 ## Project structure
 

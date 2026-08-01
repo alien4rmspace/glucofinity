@@ -21,6 +21,9 @@ test("exports the complete GlucoFinity prototype", async () => {
   assert.match(html, /id="how-it-works"/);
   assert.match(html, /id="insights"/);
   assert.match(html, /id="safety"/);
+  assert.match(html, /https:\/\/alien4rmspace\.github\.io\/glucofinity/);
+  assert.match(html, /\/glucofinity\/_next\/static\//);
+  assert.match(html, /\/glucofinity\/favicon\.svg/);
   assert.match(html, /educational and informational prototype/i);
   assert.doesNotMatch(
     html,

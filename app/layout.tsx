@@ -12,7 +12,8 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const siteUrl = "https://glucofinity.github.io";
+const basePath = "/glucofinity";
+const siteUrl = `https://alien4rmspace.github.io${basePath}`;
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -20,8 +21,8 @@ export const metadata: Metadata = {
   description:
     "A university healthcare technology prototype exploring how meals, sleep, activity, and medication relate to glucose patterns.",
   icons: {
-    icon: "/favicon.svg",
-    shortcut: "/favicon.svg",
+    icon: `${basePath}/favicon.svg`,
+    shortcut: `${basePath}/favicon.svg`,
   },
   openGraph: {
     title: "GlucoFinity",
