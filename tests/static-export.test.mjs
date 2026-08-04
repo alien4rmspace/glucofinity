@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const exportedPage = new URL("../out/index.html", import.meta.url);
+const exportedDemoPage = new URL("../out/demo/index.html", import.meta.url);
 
 async function readExport() {
   return readFile(exportedPage, "utf8");
@@ -54,4 +55,19 @@ test("exports the required medical-safety language", async () => {
     html,
     /does not imply university endorsement, clinical evidence/i,
   );
+});
+
+test("exports the dedicated interactive demo route", async () => {
+  const [homeHtml, demoHtml] = await Promise.all([
+    readExport(),
+    readFile(exportedDemoPage, "utf8"),
+  ]);
+
+  assert.match(homeHtml, /href="\/glucofinity\/demo\/"/);
+  assert.match(demoHtml, /<title>Interactive Demo \| GlucoFinity<\/title>/i);
+  assert.match(demoHtml, /Interactive educational prototype/);
+  assert.match(demoHtml, /Your fictional day at a glance/);
+  assert.match(demoHtml, /All readings, meals, calculations, and observations are fictional/i);
+  assert.match(demoHtml, /Not for diagnosis, treatment, medication, or insulin decisions/i);
+  assert.doesNotMatch(demoHtml, /connected to a real sensor/i);
 });
