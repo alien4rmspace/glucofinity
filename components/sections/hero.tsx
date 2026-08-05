@@ -4,7 +4,7 @@ import { ArrowDown, ArrowRight, FlaskConical } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { DashboardPreview } from "@/components/dashboard/dashboard-preview";
-import glucofinityLockup from "@/public/glucofinity-lockup.png";
+import glucofinityLockup from "@/public/glucofinity-lockup-transparent.png";
 
 export function Hero() {
   return (
@@ -13,7 +13,7 @@ export function Hero() {
         <div className="max-w-xl">
           <div className="inline-flex items-center gap-2 rounded-full border border-[#cddceb] bg-white px-3 py-1.5 text-xs font-semibold text-[#31506f]"><FlaskConical className="size-3.5 text-[#1268e8]" aria-hidden="true" />University healthcare technology prototype</div>
           <h1 className="sr-only">GlucoFinity</h1>
-          <div className="mt-6 max-w-[26rem] overflow-hidden rounded-lg border border-[#dce5ee] bg-white shadow-sm">
+          <div className="mt-6 max-w-[26rem] overflow-hidden rounded-lg">
             <Image src={glucofinityLockup} alt="" priority className="h-auto w-full" />
           </div>
           <p className="mt-5 text-xl font-semibold leading-8 text-[#1268e8] sm:text-2xl">Discover the possibilities within your glucose data.</p>
