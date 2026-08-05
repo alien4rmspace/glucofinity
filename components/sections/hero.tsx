@@ -1,8 +1,10 @@
 "use client";
 
 import { ArrowDown, ArrowRight, FlaskConical } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { DashboardPreview } from "@/components/dashboard/dashboard-preview";
+import glucofinityLockup from "@/public/glucofinity-lockup.png";
 
 export function Hero() {
   return (
@@ -10,7 +12,10 @@ export function Hero() {
       <div className="mx-auto grid max-w-7xl items-center gap-12 px-4 pb-16 pt-14 sm:px-6 sm:pt-20 lg:grid-cols-[0.78fr_1.22fr] lg:px-8 lg:pb-20 lg:pt-24">
         <div className="max-w-xl">
           <div className="inline-flex items-center gap-2 rounded-full border border-[#cddceb] bg-white px-3 py-1.5 text-xs font-semibold text-[#31506f]"><FlaskConical className="size-3.5 text-[#1268e8]" aria-hidden="true" />University healthcare technology prototype</div>
-          <h1 className="mt-6 text-5xl font-semibold text-[#0b1f33] sm:text-6xl lg:text-7xl">GlucoFinity</h1>
+          <h1 className="sr-only">GlucoFinity</h1>
+          <div className="mt-6 max-w-[26rem] overflow-hidden rounded-lg border border-[#dce5ee] bg-white shadow-sm">
+            <Image src={glucofinityLockup} alt="" priority className="h-auto w-full" />
+          </div>
           <p className="mt-5 text-xl font-semibold leading-8 text-[#1268e8] sm:text-2xl">Discover the possibilities within your glucose data.</p>
           <p className="mt-5 max-w-lg text-base leading-7 text-[#526477] sm:text-lg">GlucoFinity combines glucose readings with meals, sleep, activity, and medication data to help users recognize meaningful patterns in their health.</p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
