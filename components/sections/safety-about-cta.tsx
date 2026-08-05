@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowRight, Beaker, Braces, ChartSpline, GraduationCap, HeartPulse, Palette, ShieldCheck, Stethoscope, TriangleAlert } from "lucide-react";
+import Link from "next/link";
 import { SectionHeading } from "@/components/ui/section-heading";
 
 const limitations = [
@@ -44,7 +45,7 @@ export function SafetyAboutCta() {
       <section id="cta" className="bg-[#0b1f33] py-16 sm:py-20">
         <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
           <div className="max-w-2xl"><div className="flex items-center gap-2 text-xs font-bold uppercase text-[#63d5e8]"><HeartPulse className="size-4" aria-hidden="true" />Interactive prototype</div><h2 className="mt-4 text-3xl font-semibold text-white sm:text-4xl">Explore the GlucoFinity Demo</h2><p className="mt-4 text-base leading-7 text-[#c4d2df]">See how fictional glucose, meal, sleep, activity, and medication data can be organized into a more understandable daily picture.</p></div>
-          <div className="flex flex-col gap-3 sm:flex-row lg:flex-col xl:flex-row"><a href="#demo" className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-white px-5 text-sm font-semibold text-[#0b1f33] hover:bg-[#edf5ff]">Explore the Demo <ArrowRight className="size-4" aria-hidden="true" /></a><a href="#about" className="inline-flex h-12 items-center justify-center rounded-lg border border-[#476078] px-5 text-sm font-semibold text-white hover:border-[#7e96ad] hover:bg-[#122a42]">Learn about the project</a></div>
+          <div className="flex flex-col gap-3 sm:flex-row lg:flex-col xl:flex-row"><Link href="/demo" className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-white px-5 text-sm font-semibold text-[#0b1f33] hover:bg-[#edf5ff]">Explore the Demo <ArrowRight className="size-4" aria-hidden="true" /></Link><a href="#about" className="inline-flex h-12 items-center justify-center rounded-lg border border-[#476078] px-5 text-sm font-semibold text-white hover:border-[#7e96ad] hover:bg-[#122a42]">Learn about the project</a></div>
         </div>
         <p className="mx-auto mt-8 max-w-7xl px-4 text-xs text-[#91a8bc] sm:px-6 lg:px-8">Current version: university project prototype using deterministic mock data.</p>
       </section>

@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowDown, ArrowRight, FlaskConical } from "lucide-react";
+import Link from "next/link";
 import { DashboardPreview } from "@/components/dashboard/dashboard-preview";
 
 export function Hero() {
@@ -13,7 +14,7 @@ export function Hero() {
           <p className="mt-5 text-xl font-semibold leading-8 text-[#1268e8] sm:text-2xl">Discover the possibilities within your glucose data.</p>
           <p className="mt-5 max-w-lg text-base leading-7 text-[#526477] sm:text-lg">GlucoFinity combines glucose readings with meals, sleep, activity, and medication data to help users recognize meaningful patterns in their health.</p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <a href="#demo" className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-[#1268e8] px-5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#0f57c3]">Explore the Demo <ArrowRight className="size-4" aria-hidden="true" /></a>
+            <Link href="/demo" className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-[#1268e8] px-5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#0f57c3]">Explore the Demo <ArrowRight className="size-4" aria-hidden="true" /></Link>
             <a href="#how-it-works" className="inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-[#c9d7e4] bg-white px-5 text-sm font-semibold text-[#0b1f33] transition-colors hover:border-[#91aed0] hover:bg-[#f2f7fb]">How It Works <ArrowDown className="size-4" aria-hidden="true" /></a>
           </div>
           <p className="mt-5 text-xs leading-5 text-[#718096]">Educational prototype. Not intended for diagnosis, treatment, or medication decisions.</p>

@@ -1,6 +1,7 @@
 "use client";
 
 import { Menu, X } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Brand } from "@/components/ui/brand";
 
@@ -30,7 +31,7 @@ export function Navigation() {
           {links.map((link) => (
             <a key={link.href} href={link.href} className="text-sm font-medium text-[#526477] transition-colors hover:text-[#1268e8]">{link.label}</a>
           ))}
-          <a href="#demo" className="inline-flex h-10 items-center justify-center rounded-lg bg-[#1268e8] px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#0f57c3]">View Demo</a>
+          <Link href="/demo" className="inline-flex h-10 items-center justify-center rounded-lg bg-[#1268e8] px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#0f57c3]">View Demo</Link>
         </div>
         <button
           type="button"
@@ -49,7 +50,7 @@ export function Navigation() {
             {links.map((link) => (
               <a key={link.href} href={link.href} onClick={() => setOpen(false)} className="rounded-lg px-3 py-3 text-base font-medium text-[#34495e] hover:bg-[#f2f7fb] hover:text-[#1268e8]">{link.label}</a>
             ))}
-            <a href="#demo" onClick={() => setOpen(false)} className="mt-2 inline-flex h-11 items-center justify-center rounded-lg bg-[#1268e8] px-4 text-sm font-semibold text-white">View Demo</a>
+            <Link href="/demo" onClick={() => setOpen(false)} className="mt-2 inline-flex h-11 items-center justify-center rounded-lg bg-[#1268e8] px-4 text-sm font-semibold text-white">View Demo</Link>
           </div>
         </div>
       ) : null}
