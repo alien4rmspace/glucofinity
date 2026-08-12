@@ -73,7 +73,9 @@ export function VoiceMealEntry({
 }) {
   const recognitionRef = useRef<BrowserSpeechRecognition | undefined>(undefined);
   const transcriptRef = useRef("");
-  const speechFailedRef = useRef(false);
+  const recordingRequestedRef = useRef(false);
+  const fatalSpeechErrorRef = useRef(false);
+  const restartTimerRef = useRef<number | undefined>(undefined);
   const [speechSupport, setSpeechSupport] = useState<BrowserSpeechSupport>({
     availability: "checking",
     message: "Checking this browser's local speech support.",
@@ -103,7 +105,16 @@ export function VoiceMealEntry({
     return () => {
       active = false;
       unsubscribe();
-      recognitionRef.current?.abort();
+      recordingRequestedRef.current = false;
+      if (restartTimerRef.current !== undefined) {
+        window.clearTimeout(restartTimerRef.current);
+      }
+      const recognition = recognitionRef.current;
+      recognitionRef.current = undefined;
+      if (recognition) {
+        recognition.onend = null;
+        recognition.abort();
+      }
     };
   }, []);
 
@@ -127,46 +138,88 @@ export function VoiceMealEntry({
     setSpeechSupport(await installLocalSpeechPack());
   }
 
+  function finishRecordedTranscript() {
+    recordingRequestedRef.current = false;
+    setRecording(false);
+    if (fatalSpeechErrorRef.current) return;
+    const reviewedTranscript = transcriptRef.current.trim();
+    if (reviewedTranscript) {
+      void extractDraft(reviewedTranscript);
+    } else {
+      setActionMessage("No speech was detected. Try again or type the meal description.");
+    }
+  }
+
+  function beginRecognitionSegment() {
+    const recognition = createLocalSpeechRecognition();
+    const segmentBase = transcriptRef.current.trim();
+    recognitionRef.current = recognition;
+    recognition.onresult = (event) => {
+      const parts: string[] = [];
+      for (let index = 0; index < event.results.length; index += 1) {
+        const result = event.results[index];
+        if (result?.[0]?.transcript) parts.push(result[0].transcript);
+      }
+      const segmentTranscript = parts.join(" ").trim();
+      const nextTranscript = [segmentBase, segmentTranscript].filter(Boolean).join(" ").trim();
+      transcriptRef.current = nextTranscript;
+      setTranscript(nextTranscript);
+    };
+    recognition.onerror = (event) => {
+      if (!recordingRequestedRef.current) return;
+      if (event.error === "no-speech") {
+        setActionMessage("Still listening. Keep speaking, or press Stop recording when finished.");
+        return;
+      }
+      fatalSpeechErrorRef.current = true;
+      recordingRequestedRef.current = false;
+      setActionMessage(speechErrorMessage(event.error));
+    };
+    recognition.onend = () => {
+      if (recognitionRef.current === recognition) recognitionRef.current = undefined;
+      if (recordingRequestedRef.current && !fatalSpeechErrorRef.current) {
+        restartTimerRef.current = window.setTimeout(() => {
+          restartTimerRef.current = undefined;
+          if (!recordingRequestedRef.current) return;
+          try {
+            beginRecognitionSegment();
+          } catch (error) {
+            fatalSpeechErrorRef.current = true;
+            recordingRequestedRef.current = false;
+            setRecording(false);
+            setActionMessage(
+              error instanceof Error
+                ? error.message
+                : "Local speech recognition could not continue.",
+            );
+          }
+        }, 100);
+        return;
+      }
+      finishRecordedTranscript();
+    };
+    recognition.start();
+  }
+
   function startRecording() {
     if (modelState.status !== "ready") {
       setActionMessage("Prepare LFM2.5 before recording a meal description.");
       return;
     }
-    setActionMessage("");
     setVoiceDraft(undefined);
     setTranscript("");
     transcriptRef.current = "";
-    speechFailedRef.current = false;
+    fatalSpeechErrorRef.current = false;
+    recordingRequestedRef.current = true;
+    setRecording(true);
+    setActionMessage("Recording. Speak naturally, then press Stop recording when finished.");
 
     try {
-      const recognition = createLocalSpeechRecognition();
-      recognitionRef.current = recognition;
-      recognition.onresult = (event) => {
-        const parts: string[] = [];
-        for (let index = 0; index < event.results.length; index += 1) {
-          const result = event.results[index];
-          if (result?.[0]?.transcript) parts.push(result[0].transcript);
-        }
-        const nextTranscript = parts.join(" ").trim();
-        transcriptRef.current = nextTranscript;
-        setTranscript(nextTranscript);
-      };
-      recognition.onerror = (event) => {
-        speechFailedRef.current = true;
-        setActionMessage(speechErrorMessage(event.error));
-      };
-      recognition.onend = () => {
-        recognitionRef.current = undefined;
-        setRecording(false);
-        if (!speechFailedRef.current && transcriptRef.current.trim()) {
-          void extractDraft(transcriptRef.current);
-        } else if (!speechFailedRef.current) {
-          setActionMessage("No speech was detected. Try again or type the meal description.");
-        }
-      };
-      recognition.start();
-      setRecording(true);
+      beginRecognitionSegment();
     } catch (error) {
+      fatalSpeechErrorRef.current = true;
+      recordingRequestedRef.current = false;
+      setRecording(false);
       setActionMessage(
         error instanceof Error ? error.message : "Local speech recognition could not start.",
       );
@@ -174,7 +227,15 @@ export function VoiceMealEntry({
   }
 
   function stopRecording() {
-    recognitionRef.current?.stop();
+    recordingRequestedRef.current = false;
+    if (restartTimerRef.current !== undefined) {
+      window.clearTimeout(restartTimerRef.current);
+      restartTimerRef.current = undefined;
+    }
+    setActionMessage("Finishing the local transcript.");
+    const recognition = recognitionRef.current;
+    if (recognition) recognition.stop();
+    else finishRecordedTranscript();
   }
 
   async function extractDraft(value = transcript) {
@@ -396,6 +457,11 @@ export function VoiceMealEntry({
           <div>
             <p className="text-sm font-semibold text-[#0b1f33]">2. Speak or type the meal</p>
             <p className="mt-1 text-xs leading-5 text-[#64768a]">{speechSupport.message}</p>
+            <p className="mt-1 text-xs leading-5 text-[#64768a]">
+              Press once to start recording. Pauses will not submit the meal; press the same
+              button again when you are finished. You can name several foods and portions in
+              one recording.
+            </p>
           </div>
           {speechSupport.availability === "downloadable" ? (
             <button
@@ -410,6 +476,7 @@ export function VoiceMealEntry({
             type="button"
             onClick={recording ? stopRecording : startRecording}
             disabled={!speechReady || !modelReady || processing}
+            aria-pressed={recording}
             className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 sm:w-fit ${
               recording ? "bg-[#a43b3b] hover:bg-[#8c3030]" : "bg-[#1268e8] hover:bg-[#0f57c3]"
             }`}
@@ -419,7 +486,7 @@ export function VoiceMealEntry({
             ) : (
               <Mic className="size-4" aria-hidden="true" />
             )}
-            {recording ? "Stop and process" : "Record meal description"}
+            {recording ? "Stop recording and process" : "Start recording"}
           </button>
           <label className="grid gap-1.5 text-sm font-semibold text-[#34495e]">
             Local transcript or typed description

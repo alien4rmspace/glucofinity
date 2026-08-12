@@ -82,6 +82,12 @@ const PORTION_WORDS = new Set([
 
 const CONNECTOR_WORDS = new Set(["and", "of"]);
 
+const LEADING_MEAL_CONTEXT = [
+  /^(?:for|at)\s+(?:breakfast|brunch|lunch|dinner|supper|snack|my meal)\s*,?\s*/i,
+  /^(?:my\s+(?:breakfast|brunch|lunch|dinner|supper|snack|meal)\s+(?:was|included)\s+)/i,
+  /^(?:(?:i|we)\s+)?(?:had|ate|have|am having|are having)\s+/i,
+];
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -133,6 +139,21 @@ function foodName(value: string): string | undefined {
     .join(" ");
 }
 
+function removeLeadingMealContext(value: string): string {
+  let reviewed = value.trim();
+  for (const pattern of LEADING_MEAL_CONTEXT) reviewed = reviewed.replace(pattern, "");
+  return reviewed.trim();
+}
+
+function splitFoodClauses(value: string): string[] {
+  const reviewed = removeLeadingMealContext(value);
+  return reviewed
+    .split(/\s*(?:,|;)\s*|\s+(?:and|plus|with)\s+(?!a\s+half\b)/i)
+    .map((food) => food.replace(/^(?:and|plus|with)\s+/i, "").trim())
+    .filter((food) => food.length > 0 && food.length <= MAX_FOOD_NAME_LENGTH)
+    .slice(0, MAX_FOODS);
+}
+
 export function deriveMealNameFromFoods(foods: readonly string[]): string | undefined {
   const names = foods
     .map(foodName)
@@ -145,6 +166,22 @@ export function deriveMealNameFromFoods(foods: readonly string[]): string | unde
     );
   if (names.length === 0) return undefined;
   return names.join(", ").slice(0, MAX_MEAL_NAME_LENGTH);
+}
+
+export function extractGroundedMealFromTranscript(
+  transcript: string,
+): MealTranscriptExtraction {
+  const reviewedTranscript = validateMealTranscript(transcript);
+  const foods = splitFoodClauses(reviewedTranscript).filter(
+    (food, index, values) =>
+      values.findIndex(
+        (candidate) => candidate.toLocaleLowerCase() === food.toLocaleLowerCase(),
+      ) === index,
+  );
+  return {
+    mealName: deriveMealNameFromFoods(foods),
+    foods,
+  };
 }
 
 function optionalGroundedString(
@@ -198,7 +235,7 @@ export function buildMealTranscriptMessages(transcript: string) {
     {
       role: "system" as const,
       content:
-        'Extract editable meal details from the transcript. Return only JSON with this exact shape: {"mealName":"food-name summary only","foods":["food and portion explicitly stated"]}. The mealName must contain food names, never meal types such as breakfast, lunch, dinner, or snack. Every foods item must repeat its food name with its stated portion; never return a quantity or unit alone. Example: {"mealName":"White rice","foods":["nine grams of white rice"]}. Preserve stated quantities and units. Use only words, quantities, units, and foods stated in the transcript. Omit uncertain details. Do not estimate nutrition, glucose effects, medication, diagnosis, treatment, or advice.',
+        'Extract editable meal details from the transcript. Return only JSON with this exact shape: {"mealName":"food-name summary only","foods":["food and portion explicitly stated"]}. The mealName must contain food names, never meal types such as breakfast, lunch, dinner, or snack. Return one foods array item for every explicitly stated food, including its own stated quantity and unit; never combine multiple foods into one item and never return a quantity or unit alone. Examples: {"mealName":"White rice","foods":["nine grams of white rice"]} and {"mealName":"Brown rice, salmon","foods":["nine grams of brown rice","five grams of salmon"]}. Preserve stated quantities and units. Use only words, quantities, units, and foods stated in the transcript. Omit uncertain details. Do not estimate nutrition, glucose effects, medication, diagnosis, treatment, or advice.',
     },
     {
       role: "user" as const,
@@ -237,7 +274,7 @@ export function parseMealTranscriptExtraction(
     throw new MealTranscriptExtractionError("The meal draft included too many foods.");
   }
 
-  const foods = parsed.foods.map((food, index) => {
+  const foods = parsed.foods.flatMap((food, index) => {
     const validated = optionalGroundedString(
       food,
       reviewedTranscript,
@@ -247,7 +284,7 @@ export function parseMealTranscriptExtraction(
     if (!validated) {
       throw new MealTranscriptExtractionError(`foods[${index}] is required.`);
     }
-    return validated;
+    return splitFoodClauses(validated);
   });
 
   const groundedModelMealName = optionalGroundedString(
