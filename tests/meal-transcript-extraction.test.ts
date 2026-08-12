@@ -18,6 +18,7 @@ test("constrains local LFM extraction to non-medical meal fields", () => {
   assert.match(messages[0].content, /Preserve stated quantities and units/);
   assert.match(messages[0].content, /never meal types such as breakfast, lunch, dinner, or snack/);
   assert.match(messages[0].content, /never return a quantity or unit alone/);
+  assert.match(messages[0].content, /may omit all punctuation and connector words/);
   assert.match(messages[0].content, /medication, diagnosis, treatment, or advice/);
 });
 
@@ -65,6 +66,29 @@ test("uses a transcript-grounded multi-food fallback when local model output is 
     extractGroundedMealFromTranscript("I had one and a half cups of brown rice").foods,
     ["one and a half cups of brown rice"],
   );
+});
+
+test("separates repeated portions in an unpunctuated speech transcript", () => {
+  const unpunctuatedTranscript =
+    "Nine grams of rice ten grams of salmon a cup of lettuce";
+  const combinedModelOutput =
+    '{"mealName":"Rice salmon lettuce","foods":["nine grams of rice ten grams of salmon a cup of lettuce"]}';
+
+  const modelResult = parseMealTranscriptExtraction(
+    combinedModelOutput,
+    unpunctuatedTranscript,
+  );
+  const fallbackResult = extractGroundedMealFromTranscript(unpunctuatedTranscript);
+  const expectedModelFoods = [
+    "nine grams of rice",
+    "ten grams of salmon",
+    "a cup of lettuce",
+  ];
+
+  assert.deepEqual(modelResult.foods, expectedModelFoods);
+  assert.deepEqual(fallbackResult.foods, ["Nine grams of rice", ...expectedModelFoods.slice(1)]);
+  assert.equal(modelResult.mealName, "Rice, Salmon, Lettuce");
+  assert.equal(fallbackResult.mealName, "Rice, Salmon, Lettuce");
 });
 
 test("accepts transcript-grounded meal details", () => {

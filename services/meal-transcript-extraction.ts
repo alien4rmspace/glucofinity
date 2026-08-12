@@ -82,6 +82,15 @@ const PORTION_WORDS = new Set([
 
 const CONNECTOR_WORDS = new Set(["and", "of"]);
 
+const SPOKEN_NUMBER_PATTERN =
+  "(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred)";
+const PORTION_UNIT_PATTERN =
+  "(?:grams?|g|ounces?|oz|cups?|tablespoons?|tbsp|teaspoons?|tsp|slices?|pieces?|items?|containers?)";
+const UNPUNCTUATED_PORTION_START = new RegExp(
+  `\\b(?:a|an|half|quarter|\\d+(?:\\.\\d+)?|${SPOKEN_NUMBER_PATTERN}(?:[\\s-]+${SPOKEN_NUMBER_PATTERN})*(?:\\s+and\\s+(?:a\\s+)?half)?)\\s+${PORTION_UNIT_PATTERN}\\b`,
+  "gi",
+);
+
 const LEADING_MEAL_CONTEXT = [
   /^(?:for|at)\s+(?:breakfast|brunch|lunch|dinner|supper|snack|my meal)\s*,?\s*/i,
   /^(?:my\s+(?:breakfast|brunch|lunch|dinner|supper|snack|meal)\s+(?:was|included)\s+)/i,
@@ -145,11 +154,30 @@ function removeLeadingMealContext(value: string): string {
   return reviewed.trim();
 }
 
+function splitUnpunctuatedPortionClauses(value: string): string[] {
+  const boundaries = [0];
+  UNPUNCTUATED_PORTION_START.lastIndex = 0;
+
+  for (const match of value.matchAll(UNPUNCTUATED_PORTION_START)) {
+    const matchIndex = match.index;
+    const currentStart = boundaries[boundaries.length - 1];
+    if (matchIndex === 0 || matchIndex === currentStart) continue;
+
+    const precedingClause = value.slice(currentStart, matchIndex).trim();
+    if (foodNameWords(precedingClause).length > 0) boundaries.push(matchIndex);
+  }
+
+  return boundaries.map((start, index) =>
+    value.slice(start, boundaries[index + 1] ?? value.length).trim(),
+  );
+}
+
 function splitFoodClauses(value: string): string[] {
   const reviewed = removeLeadingMealContext(value);
   return reviewed
     .split(/\s*(?:,|;)\s*|\s+(?:and|plus|with)\s+(?!a\s+half\b)/i)
     .map((food) => food.replace(/^(?:and|plus|with)\s+/i, "").trim())
+    .flatMap(splitUnpunctuatedPortionClauses)
     .filter((food) => food.length > 0 && food.length <= MAX_FOOD_NAME_LENGTH)
     .slice(0, MAX_FOODS);
 }
@@ -235,7 +263,7 @@ export function buildMealTranscriptMessages(transcript: string) {
     {
       role: "system" as const,
       content:
-        'Extract editable meal details from the transcript. Return only JSON with this exact shape: {"mealName":"food-name summary only","foods":["food and portion explicitly stated"]}. The mealName must contain food names, never meal types such as breakfast, lunch, dinner, or snack. Return one foods array item for every explicitly stated food, including its own stated quantity and unit; never combine multiple foods into one item and never return a quantity or unit alone. Examples: {"mealName":"White rice","foods":["nine grams of white rice"]} and {"mealName":"Brown rice, salmon","foods":["nine grams of brown rice","five grams of salmon"]}. Preserve stated quantities and units. Use only words, quantities, units, and foods stated in the transcript. Omit uncertain details. Do not estimate nutrition, glucose effects, medication, diagnosis, treatment, or advice.',
+        'Extract editable meal details from the transcript. Return only JSON with this exact shape: {"mealName":"food-name summary only","foods":["food and portion explicitly stated"]}. The mealName must contain food names, never meal types such as breakfast, lunch, dinner, or snack. Return one foods array item for every explicitly stated food, including its own stated quantity and unit; never combine multiple foods into one item and never return a quantity or unit alone. Speech transcripts may omit all punctuation and connector words; repeated quantities and units start separate foods. Examples: {"mealName":"White rice","foods":["nine grams of white rice"]} and {"mealName":"Brown rice, salmon","foods":["nine grams of brown rice","five grams of salmon"]}. Preserve stated quantities and units. Use only words, quantities, units, and foods stated in the transcript. Omit uncertain details. Do not estimate nutrition, glucose effects, medication, diagnosis, treatment, or advice.',
     },
     {
       role: "user" as const,
