@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   estimateLocalNutrition,
+  findLocalNutritionSuggestions,
   splitFoodDescriptions,
 } from "../services/local-nutrition-estimator.ts";
 
@@ -80,7 +81,29 @@ test("keeps unmatched foods unresolved and totals only matched foods", () => {
   assert.equal(estimate.matchedFoodCount, 1);
   assert.equal(estimate.totalFoodCount, 2);
   assert.equal(estimate.foods[1]?.nutrients, undefined);
-  assert.match(estimate.foods[1]?.unresolvedReason ?? "", /Enter nutrition manually/);
+  assert.match(estimate.foods[1]?.unresolvedReason ?? "", /Edit the ingredient/);
+});
+
+test("suggests specific rice references while preserving a spoken gram portion", () => {
+  const suggestions = findLocalNutritionSuggestions("10 grams of rice");
+
+  assert.deepEqual(
+    suggestions.map(({ name, suggestedInput }) => ({ name, suggestedInput })),
+    [
+      { name: "Cooked brown rice", suggestedInput: "10 grams of brown rice" },
+      { name: "Cooked white rice", suggestedInput: "10 grams of white rice" },
+    ],
+  );
+  const selectedEstimate = estimateLocalNutrition([suggestions[1]?.suggestedInput ?? ""]);
+  assert.equal(selectedEstimate.matchedFoodCount, 1);
+  assert.equal(selectedEstimate.foods[0]?.estimatedGrams, 10);
+});
+
+test("suggests a close local food for a speech-recognition typo", () => {
+  const [suggestion] = findLocalNutritionSuggestions("20 grams of salman");
+
+  assert.equal(suggestion?.name, "Cooked Atlantic salmon");
+  assert.equal(suggestion?.suggestedInput, "20 grams of salmon");
 });
 
 test("splits editable food descriptions without empty rows", () => {

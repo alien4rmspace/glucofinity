@@ -7,6 +7,7 @@ import type {
   LocalNutritionFoodEstimate,
   LocalNutritionPortionUnit,
   LocalNutritionReferenceFood,
+  LocalNutritionSuggestion,
   MacroNutrients,
 } from "../types/nutrition.ts";
 
@@ -86,6 +87,36 @@ const ALIAS_MATCHES = LOCAL_NUTRITION_FOODS.flatMap((food) =>
   })),
 ).sort((left, right) => right.alias.length - left.alias.length);
 
+const FOOD_QUERY_STOP_WORDS = new Set([
+  ...Object.keys(NUMBER_WORDS),
+  "hundred",
+  "and",
+  "of",
+  "percent",
+  "gram",
+  "grams",
+  "g",
+  "ounce",
+  "ounces",
+  "oz",
+  "cup",
+  "cups",
+  "tablespoon",
+  "tablespoons",
+  "tbsp",
+  "teaspoon",
+  "teaspoons",
+  "tsp",
+  "slice",
+  "slices",
+  "piece",
+  "pieces",
+  "item",
+  "items",
+  "container",
+  "containers",
+]);
+
 function normalize(value: string): string {
   return value
     .toLocaleLowerCase()
@@ -96,6 +127,97 @@ function normalize(value: string): string {
     .replace(/[^\p{L}\p{N}/.]+/gu, " ")
     .trim()
     .replace(/\s+/g, " ");
+}
+
+function foodQueryWords(value: string): string[] {
+  return normalize(value)
+    .split(" ")
+    .filter(
+      (word) =>
+        word.length > 0 &&
+        !FOOD_QUERY_STOP_WORDS.has(word) &&
+        !/^\d+(?:\.\d+)?(?:\/\d+)?$/.test(word),
+    );
+}
+
+function editDistance(left: string, right: string): number {
+  const previous = Array.from({ length: right.length + 1 }, (_, index) => index);
+  for (let leftIndex = 1; leftIndex <= left.length; leftIndex += 1) {
+    const current = [leftIndex];
+    for (let rightIndex = 1; rightIndex <= right.length; rightIndex += 1) {
+      const substitution =
+        previous[rightIndex - 1] +
+        (left[leftIndex - 1] === right[rightIndex - 1] ? 0 : 1);
+      current[rightIndex] = Math.min(
+        previous[rightIndex] + 1,
+        current[rightIndex - 1] + 1,
+        substitution,
+      );
+    }
+    previous.splice(0, previous.length, ...current);
+  }
+  return previous[right.length];
+}
+
+function aliasSimilarity(queryWords: readonly string[], alias: string): number {
+  const aliasWords = normalize(alias).split(" ").filter(Boolean);
+  const overlap = queryWords.filter((word) => aliasWords.includes(word)).length;
+  if (overlap === queryWords.length) {
+    return 0.8 + 0.2 * (overlap / aliasWords.length);
+  }
+  const queryText = queryWords.join(" ");
+  const aliasText = aliasWords.join(" ");
+  const longestLength = Math.max(queryText.length, aliasText.length);
+  const editSimilarity =
+    longestLength > 0 ? 1 - editDistance(queryText, aliasText) / longestLength : 0;
+  const tokenSimilarity = overlap / Math.max(queryWords.length, aliasWords.length);
+  return Math.max(editSimilarity, tokenSimilarity);
+}
+
+function replaceFoodWords(
+  input: string,
+  queryWords: readonly string[],
+  replacement: string,
+): string {
+  const reviewedInput = input.trim();
+  const firstFoodWord = queryWords[0];
+  if (!firstFoodWord) return replacement;
+  const matchIndex = reviewedInput.toLocaleLowerCase().indexOf(firstFoodWord);
+  if (matchIndex < 0) return replacement;
+  return `${reviewedInput.slice(0, matchIndex)}${replacement}`.trim();
+}
+
+export function findLocalNutritionSuggestions(
+  input: string,
+  limit = 3,
+): LocalNutritionSuggestion[] {
+  const queryWords = foodQueryWords(input);
+  if (queryWords.length === 0 || limit <= 0) return [];
+
+  const bestByFood = new Map<
+    number,
+    { food: LocalNutritionReferenceFood; alias: string; similarity: number }
+  >();
+  for (const food of LOCAL_NUTRITION_FOODS) {
+    for (const alias of food.aliases) {
+      const similarity = aliasSimilarity(queryWords, alias);
+      const current = bestByFood.get(food.fdcId);
+      if (!current || similarity > current.similarity) {
+        bestByFood.set(food.fdcId, { food, alias, similarity });
+      }
+    }
+  }
+
+  return [...bestByFood.values()]
+    .filter(({ similarity }) => similarity >= 0.55)
+    .sort((left, right) => right.similarity - left.similarity)
+    .slice(0, Math.min(limit, 5))
+    .map(({ food, alias, similarity }) => ({
+      fdcId: food.fdcId,
+      name: food.name,
+      suggestedInput: replaceFoodWords(input, queryWords, alias),
+      similarity: Math.round(similarity * 100) / 100,
+    }));
 }
 
 function matchReference(value: string): LocalNutritionReferenceFood | undefined {
@@ -257,7 +379,8 @@ export function estimateLocalNutrition(foods: readonly string[]): LocalNutrition
       return {
         input: reviewedInput,
         usedDefaultPortion: false,
-        unresolvedReason: "Not found in the compact local reference. Enter nutrition manually.",
+        unresolvedReason:
+          "Not found in the compact local reference. Edit the ingredient or choose a close local match.",
       };
     }
 

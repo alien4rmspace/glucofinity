@@ -29,6 +29,7 @@ import {
 } from "@/services/browser-speech-service";
 import {
   estimateLocalNutrition,
+  findLocalNutritionSuggestions,
   splitFoodDescriptions,
 } from "@/services/local-nutrition-estimator";
 import { deriveMealNameFromFoods } from "@/services/meal-transcript-extraction";
@@ -47,6 +48,7 @@ type VoiceDraft = {
   generatedAt: string;
   edited: boolean;
   mealNameEdited: boolean;
+  foodsEdited: boolean;
   nutritionEdited: boolean;
   nutritionEstimate: LocalNutritionEstimate;
 };
@@ -60,6 +62,7 @@ export type AppliedBrowserVoiceMealDraft = {
   model: string;
   generatedAt: string;
   edited: boolean;
+  foodsEdited: boolean;
   nutritionEdited: boolean;
   nutritionEstimate: LocalNutritionEstimate;
 };
@@ -90,6 +93,8 @@ export function VoiceMealEntry({
   const [actionMessage, setActionMessage] = useState("");
   const [voiceDraft, setVoiceDraft] = useState<VoiceDraft>();
   const [nutritionEditing, setNutritionEditing] = useState(false);
+  const [editingFoodIndex, setEditingFoodIndex] = useState<number>();
+  const [foodEditValue, setFoodEditValue] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -207,6 +212,8 @@ export function VoiceMealEntry({
       return;
     }
     setVoiceDraft(undefined);
+    setEditingFoodIndex(undefined);
+    setFoodEditValue("");
     setTranscript("");
     transcriptRef.current = "";
     fatalSpeechErrorRef.current = false;
@@ -257,10 +264,13 @@ export function VoiceMealEntry({
         generatedAt: new Date().toISOString(),
         edited: false,
         mealNameEdited: false,
+        foodsEdited: false,
         nutritionEdited: false,
         nutritionEstimate,
       });
       setNutritionEditing(false);
+      setEditingFoodIndex(undefined);
+      setFoodEditValue("");
       setActionMessage("Review the local model's draft before adding it to this session.");
     } catch (error) {
       setVoiceDraft({
@@ -271,10 +281,13 @@ export function VoiceMealEntry({
         generatedAt: new Date().toISOString(),
         edited: false,
         mealNameEdited: false,
+        foodsEdited: false,
         nutritionEdited: false,
         nutritionEstimate: estimateLocalNutrition([]),
       });
       setNutritionEditing(false);
+      setEditingFoodIndex(undefined);
+      setFoodEditValue("");
       setActionMessage(
         `The transcript is ready, but the local model did not produce grounded meal fields. Enter them manually. ${
           error instanceof Error ? error.message : ""
@@ -286,6 +299,10 @@ export function VoiceMealEntry({
   }
 
   function updateVoiceDraft(field: "mealName" | "time" | "foodsText", value: string) {
+    if (field === "foodsText") {
+      setEditingFoodIndex(undefined);
+      setFoodEditValue("");
+    }
     setVoiceDraft((current) => {
       if (!current) return current;
       if (field === "mealName") {
@@ -302,10 +319,25 @@ export function VoiceMealEntry({
           ? current.mealName
           : (deriveMealNameFromFoods(foods) ?? ""),
         edited: true,
+        foodsEdited: true,
         nutritionEdited: false,
         nutritionEstimate: estimateLocalNutrition(foods),
       };
     });
+  }
+
+  function startEditingFood(index: number, value: string) {
+    setEditingFoodIndex(index);
+    setFoodEditValue(value);
+  }
+
+  function replaceFoodAtIndex(index: number, value: string) {
+    const reviewedValue = value.trim();
+    if (!voiceDraft || !reviewedValue) return;
+    const foods = splitFoodDescriptions(voiceDraft.foodsText);
+    if (!foods[index]) return;
+    foods[index] = reviewedValue;
+    updateVoiceDraft("foodsText", foods.join(", "));
   }
 
   function updateNutritionTotal(field: keyof MacroNutrients, value: string) {
@@ -340,6 +372,7 @@ export function VoiceMealEntry({
       model: WEB_LFM_MODEL_ID,
       generatedAt: voiceDraft.generatedAt,
       edited: voiceDraft.edited,
+      foodsEdited: voiceDraft.foodsEdited,
       nutritionEdited: voiceDraft.nutritionEdited,
       nutritionEstimate: voiceDraft.nutritionEstimate,
     };
@@ -348,6 +381,8 @@ export function VoiceMealEntry({
   function clearVoiceDraft() {
     setVoiceDraft(undefined);
     setNutritionEditing(false);
+    setEditingFoodIndex(undefined);
+    setFoodEditValue("");
     setTranscript("");
     transcriptRef.current = "";
   }
@@ -571,7 +606,7 @@ export function VoiceMealEntry({
                 <Calculator className="mt-0.5 size-5 shrink-0 text-[#1268e8]" aria-hidden="true" />
                 <div>
                   <p className="text-sm font-semibold text-[#0b1f33]">Estimated nutrition</p>
-                  <p className="mt-1 text-xs leading-5 text-[#64768a]">
+                  <p className="mt-1 text-xs leading-5 text-[#64768a]" aria-live="polite">
                     {voiceDraft.nutritionEdited
                       ? "These values include your edits and still require review."
                       : `${voiceDraft.nutritionEstimate.matchedFoodCount} of ${voiceDraft.nutritionEstimate.totalFoodCount} foods matched the local reference. Unmatched foods are excluded from the totals.`}
@@ -632,29 +667,110 @@ export function VoiceMealEntry({
             ) : null}
 
             <ul className="grid gap-2" aria-label="Per-food nutrition matches">
-              {voiceDraft.nutritionEstimate.foods.map((food, index) => (
-                <li
-                  key={`${food.input}-${index}`}
-                  className="rounded-lg border border-[#dce5ee] bg-white p-3"
-                >
-                  <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                      <p className="text-sm font-semibold text-[#0b1f33]">{food.input}</p>
-                      <p className="mt-1 text-xs leading-5 text-[#64768a]">
-                        {food.matchedName
-                          ? `${food.matchedName} · ${food.portionLabel}`
-                          : food.unresolvedReason}
-                      </p>
+              {voiceDraft.nutritionEstimate.foods.map((food, index) => {
+                const suggestions = food.nutrients
+                  ? []
+                  : findLocalNutritionSuggestions(food.input);
+                const editingThisFood = editingFoodIndex === index;
+                return (
+                  <li
+                    key={`${food.input}-${index}`}
+                    className="rounded-lg border border-[#dce5ee] bg-white p-3"
+                  >
+                    <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <p className="text-sm font-semibold text-[#0b1f33]">{food.input}</p>
+                        <p className="mt-1 text-xs leading-5 text-[#64768a]">
+                          {food.matchedName
+                            ? `${food.matchedName} · ${food.portionLabel}`
+                            : food.unresolvedReason}
+                        </p>
+                      </div>
+                      {food.nutrients ? (
+                        <p className="shrink-0 text-xs font-semibold text-[#34495e]">
+                          {food.nutrients.carbohydratesGrams}g carbs · {food.nutrients.proteinGrams}g protein ·{" "}
+                          {food.nutrients.fatGrams}g fat · {food.nutrients.fiberGrams}g fiber
+                        </p>
+                      ) : null}
                     </div>
-                    {food.nutrients ? (
-                      <p className="shrink-0 text-xs font-semibold text-[#34495e]">
-                        {food.nutrients.carbohydratesGrams}g carbs · {food.nutrients.proteinGrams}g protein ·{" "}
-                        {food.nutrients.fatGrams}g fat · {food.nutrients.fiberGrams}g fiber
-                      </p>
+
+                    {!food.nutrients ? (
+                      <div className="mt-3 grid gap-3 border-t border-[#e4ebf2] pt-3">
+                        {editingThisFood ? (
+                          <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-end">
+                            <label className="grid gap-1.5 text-xs font-semibold text-[#526477]">
+                              Edit ingredient and portion
+                              <input
+                                value={foodEditValue}
+                                onChange={(event) => setFoodEditValue(event.target.value)}
+                                maxLength={120}
+                                className="h-10 min-w-0 rounded-lg border border-[#b8d3f0] bg-white px-3 text-sm font-normal text-[#0b1f33]"
+                              />
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingFoodIndex(undefined);
+                                setFoodEditValue("");
+                              }}
+                              className="h-10 rounded-lg border border-[#cbd8e4] px-3 text-xs font-semibold text-[#526477] hover:bg-[#f7fafc]"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => replaceFoodAtIndex(index, foodEditValue)}
+                              disabled={!foodEditValue.trim()}
+                              className="h-10 rounded-lg bg-[#1268e8] px-3 text-xs font-semibold text-white hover:bg-[#0f57c3] disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              Update ingredient
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => startEditingFood(index, food.input)}
+                            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-[#b8d3f0] bg-white px-3 text-xs font-semibold text-[#0e5ab7] hover:bg-[#edf5ff] sm:w-fit"
+                          >
+                            <Pencil className="size-4" aria-hidden="true" /> Edit ingredient
+                          </button>
+                        )}
+
+                        {suggestions.length > 0 ? (
+                          <div>
+                            <p className="text-xs font-semibold text-[#34495e]">
+                              Closest foods in the local reference
+                            </p>
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {suggestions.map((suggestion) => (
+                                <button
+                                  key={suggestion.fdcId}
+                                  type="button"
+                                  onClick={() =>
+                                    replaceFoodAtIndex(index, suggestion.suggestedInput)
+                                  }
+                                  className="rounded-lg border border-[#cfc4fa] bg-[#f8f6ff] px-3 py-2 text-left text-xs text-[#34495e] hover:bg-[#f0edff]"
+                                >
+                                  <span className="block font-semibold text-[#6049bc]">
+                                    Use {suggestion.name}
+                                  </span>
+                                  <span className="mt-0.5 block text-[11px] text-[#64768a]">
+                                    {suggestion.suggestedInput}
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                            <p className="mt-2 text-[11px] leading-5 text-[#718096]">
+                              Suggestions are local text matches, not automatic substitutions.
+                              Choose one only if it matches what you ate.
+                            </p>
+                          </div>
+                        ) : null}
+                      </div>
                     ) : null}
-                  </div>
-                </li>
-              ))}
+                  </li>
+                );
+              })}
             </ul>
 
             {voiceDraft.nutritionEstimate.defaultPortionCount > 0 ? (
@@ -684,6 +800,8 @@ export function VoiceMealEntry({
               onClick={() => {
                 setVoiceDraft(undefined);
                 setNutritionEditing(false);
+                setEditingFoodIndex(undefined);
+                setFoodEditValue("");
               }}
               className="h-11 rounded-lg border border-[#cbd8e4] px-4 text-sm font-semibold text-[#34495e] hover:bg-[#f7fafc]"
             >
