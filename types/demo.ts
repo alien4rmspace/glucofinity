@@ -1,3 +1,5 @@
+import type { NutritionEstimateSource } from "@/types/ai";
+
 export type DemoTab = "dashboard" | "meals" | "trends" | "insights" | "settings";
 
 export type DemoMeal = {
@@ -5,11 +7,18 @@ export type DemoMeal = {
   timestamp: string;
   name: string;
   time: string;
-  carbohydrates: number;
-  protein: number;
-  fat: number;
+  carbohydrates?: number;
+  protein?: number;
+  fat?: number;
+  fiber?: number;
+  calories?: number;
+  foods: string;
   note: string;
   source: "seed" | "manual" | "simulated-estimate";
+  nutritionSource: NutritionEstimateSource;
+  analysisProvider?: string;
+  analysisModel?: string;
+  analysisGeneratedAt?: string;
 };
 
 export type DemoSettings = {

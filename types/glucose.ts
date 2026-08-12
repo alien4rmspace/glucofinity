@@ -64,4 +64,5 @@ export type TechnologyStage = {
   description: string;
   items: string[];
   icon: string;
+  status: "Demonstrated" | "Foundation" | "Planned";
 };
