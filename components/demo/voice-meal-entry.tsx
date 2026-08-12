@@ -8,6 +8,7 @@ import {
   MicOff,
   Pencil,
   ShieldCheck,
+  Trash2,
   WandSparkles,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -276,6 +277,16 @@ export function VoiceMealEntry({
     const foods = splitFoodDescriptions(voiceDraft.foodsText);
     if (!foods[index]) return;
     foods[index] = reviewedValue;
+    updateVoiceDraft("foodsText", foods.join(", "));
+  }
+
+  function deleteFoodAtIndex(index: number) {
+    if (!voiceDraft) return;
+    const foods = splitFoodDescriptions(voiceDraft.foodsText);
+    if (!foods[index]) return;
+    foods.splice(index, 1);
+    setEditingFoodIndex(undefined);
+    setFoodEditValue("");
     updateVoiceDraft("foodsText", foods.join(", "));
   }
 
@@ -644,12 +655,23 @@ export function VoiceMealEntry({
                             : food.unresolvedReason}
                         </p>
                       </div>
-                      {food.nutrients ? (
-                        <p className="shrink-0 text-xs font-semibold text-[#34495e]">
-                          {food.nutrients.carbohydratesGrams}g carbs · {food.nutrients.proteinGrams}g protein ·{" "}
-                          {food.nutrients.fatGrams}g fat · {food.nutrients.fiberGrams}g fiber
-                        </p>
-                      ) : null}
+                      <div className="flex shrink-0 flex-col gap-2 sm:items-end">
+                        {food.nutrients ? (
+                          <p className="text-xs font-semibold text-[#34495e]">
+                            {food.nutrients.carbohydratesGrams}g carbs · {food.nutrients.proteinGrams}g protein ·{" "}
+                            {food.nutrients.fatGrams}g fat · {food.nutrients.fiberGrams}g fiber
+                          </p>
+                        ) : null}
+                        <button
+                          type="button"
+                          onClick={() => deleteFoodAtIndex(index)}
+                          aria-label={`Delete ${food.input}`}
+                          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-[#e7bcbc] bg-white px-3 text-xs font-semibold text-[#9f2f2f] hover:bg-[#fff5f5] sm:w-fit"
+                        >
+                          <Trash2 className="size-4" aria-hidden="true" />
+                          Delete ingredient
+                        </button>
+                      </div>
                     </div>
 
                     {!food.nutrients ? (

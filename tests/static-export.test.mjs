@@ -77,6 +77,9 @@ test("keeps the AI foundation evidence-first and reviewable", async () => {
   assert.match(voiceEntry, /Related food family/);
   assert.match(voiceEntry, /Broader local option/);
   assert.match(voiceEntry, /Update ingredient/);
+  assert.match(voiceEntry, /deleteFoodAtIndex/);
+  assert.match(voiceEntry, /Delete ingredient/);
+  assert.match(voiceEntry, /aria-label={`Delete \${food\.input}`}/);
   assert.match(voiceEntry, /not equivalents or automatic/);
   assert.match(voiceEntry, /Continue in full form/);
   assert.match(voiceEntry, /Add to session/);
