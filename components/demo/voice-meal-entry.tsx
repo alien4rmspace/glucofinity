@@ -6,10 +6,15 @@ import {
   Download,
   Mic,
   MicOff,
+  Pencil,
   ShieldCheck,
   WandSparkles,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import {
+  MealTimeSelect,
+  nearestLocalMealTime,
+} from "@/components/demo/meal-time-select";
 import {
   browserMealLanguageProvider,
   WEB_LFM_MODEL_ID,
@@ -27,7 +32,7 @@ import {
   splitFoodDescriptions,
 } from "@/services/local-nutrition-estimator";
 import { deriveMealNameFromFoods } from "@/services/meal-transcript-extraction";
-import type { LocalNutritionEstimate } from "@/types/nutrition";
+import type { LocalNutritionEstimate, MacroNutrients } from "@/types/nutrition";
 import type {
   BrowserSpeechSupport,
   LocalMealModelState,
@@ -37,28 +42,34 @@ import { DemoCard } from "@/components/demo/demo-ui";
 type VoiceDraft = {
   transcript: string;
   mealName: string;
+  time: string;
   foodsText: string;
   generatedAt: string;
   edited: boolean;
   mealNameEdited: boolean;
+  nutritionEdited: boolean;
   nutritionEstimate: LocalNutritionEstimate;
 };
 
 export type AppliedBrowserVoiceMealDraft = {
   transcript: string;
   mealName: string;
+  time: string;
   foods: string[];
   providerId: string;
   model: string;
   generatedAt: string;
   edited: boolean;
+  nutritionEdited: boolean;
   nutritionEstimate: LocalNutritionEstimate;
 };
 
 export function VoiceMealEntry({
   onApply,
+  onAdd,
 }: {
   onApply: (draft: AppliedBrowserVoiceMealDraft) => void;
+  onAdd: (draft: AppliedBrowserVoiceMealDraft) => void;
 }) {
   const recognitionRef = useRef<BrowserSpeechRecognition | undefined>(undefined);
   const transcriptRef = useRef("");
@@ -76,6 +87,7 @@ export function VoiceMealEntry({
   const [processing, setProcessing] = useState(false);
   const [actionMessage, setActionMessage] = useState("");
   const [voiceDraft, setVoiceDraft] = useState<VoiceDraft>();
+  const [nutritionEditing, setNutritionEditing] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -179,23 +191,29 @@ export function VoiceMealEntry({
       setVoiceDraft({
         transcript: reviewedTranscript,
         mealName: extraction.mealName ?? "",
+        time: nearestLocalMealTime(),
         foodsText: extraction.foods.join(", "),
         generatedAt: new Date().toISOString(),
         edited: false,
         mealNameEdited: false,
+        nutritionEdited: false,
         nutritionEstimate,
       });
-      setActionMessage("Review the local model's draft before applying it to the meal form.");
+      setNutritionEditing(false);
+      setActionMessage("Review the local model's draft before adding it to this session.");
     } catch (error) {
       setVoiceDraft({
         transcript: reviewedTranscript,
         mealName: "",
+        time: nearestLocalMealTime(),
         foodsText: "",
         generatedAt: new Date().toISOString(),
         edited: false,
         mealNameEdited: false,
+        nutritionEdited: false,
         nutritionEstimate: estimateLocalNutrition([]),
       });
+      setNutritionEditing(false);
       setActionMessage(
         `The transcript is ready, but the local model did not produce grounded meal fields. Enter them manually. ${
           error instanceof Error ? error.message : ""
@@ -206,11 +224,14 @@ export function VoiceMealEntry({
     }
   }
 
-  function updateVoiceDraft(field: "mealName" | "foodsText", value: string) {
+  function updateVoiceDraft(field: "mealName" | "time" | "foodsText", value: string) {
     setVoiceDraft((current) => {
       if (!current) return current;
       if (field === "mealName") {
         return { ...current, mealName: value, mealNameEdited: true, edited: true };
+      }
+      if (field === "time") {
+        return { ...current, time: value, edited: true };
       }
       const foods = splitFoodDescriptions(value);
       return {
@@ -220,30 +241,76 @@ export function VoiceMealEntry({
           ? current.mealName
           : (deriveMealNameFromFoods(foods) ?? ""),
         edited: true,
+        nutritionEdited: false,
         nutritionEstimate: estimateLocalNutrition(foods),
       };
     });
   }
 
-  function applyVoiceDraft() {
+  function updateNutritionTotal(field: keyof MacroNutrients, value: string) {
+    const parsed = value.trim() ? Number(value) : 0;
+    if (!Number.isFinite(parsed)) return;
+    setVoiceDraft((current) =>
+      current
+        ? {
+            ...current,
+            edited: true,
+            nutritionEdited: true,
+            nutritionEstimate: {
+              ...current.nutritionEstimate,
+              totals: {
+                ...current.nutritionEstimate.totals,
+                [field]: Math.max(0, parsed),
+              },
+            },
+          }
+        : current,
+    );
+  }
+
+  function reviewedVoiceDraft(): AppliedBrowserVoiceMealDraft | undefined {
     if (!voiceDraft) return;
-    onApply({
+    return {
       transcript: voiceDraft.transcript,
       mealName: voiceDraft.mealName.trim(),
+      time: voiceDraft.time,
       foods: splitFoodDescriptions(voiceDraft.foodsText),
       providerId: WEB_LFM_PROVIDER_ID,
       model: WEB_LFM_MODEL_ID,
       generatedAt: voiceDraft.generatedAt,
       edited: voiceDraft.edited,
+      nutritionEdited: voiceDraft.nutritionEdited,
       nutritionEstimate: voiceDraft.nutritionEstimate,
-    });
+    };
+  }
+
+  function clearVoiceDraft() {
     setVoiceDraft(undefined);
+    setNutritionEditing(false);
     setTranscript("");
     transcriptRef.current = "";
   }
 
+  function applyVoiceDraft() {
+    const reviewedDraft = reviewedVoiceDraft();
+    if (!reviewedDraft) return;
+    onApply(reviewedDraft);
+    clearVoiceDraft();
+  }
+
+  function addVoiceDraft() {
+    const reviewedDraft = reviewedVoiceDraft();
+    if (!reviewedDraft) return;
+    onAdd(reviewedDraft);
+    clearVoiceDraft();
+    setActionMessage("The reviewed meal was added directly to this browser session.");
+  }
+
   const modelReady = modelState.status === "ready";
   const speechReady = speechSupport.availability === "available";
+  const draftHasMeal = Boolean(
+    voiceDraft?.mealName.trim() || splitFoodDescriptions(voiceDraft?.foodsText ?? "").length,
+  );
 
   return (
     <section aria-labelledby="voice-meal-heading" className="grid gap-4">
@@ -392,8 +459,8 @@ export function VoiceMealEntry({
             </p>
             <h3 className="mt-2 text-xl font-semibold text-[#0b1f33]">3. Review before applying</h3>
             <p className="mt-1 text-sm leading-6 text-[#64768a]">
-              Nothing is saved yet. Correct or complete the fields before applying them to
-              the regular meal form.
+              Nothing is saved yet. Review the meal, time, and estimated nutrition, then add
+              it directly or continue in the full form to include notes.
             </p>
           </div>
           <div className="rounded-lg bg-[#f7fafc] p-4">
@@ -414,6 +481,13 @@ export function VoiceMealEntry({
               />
             </label>
             <label className="grid gap-1.5 text-sm font-semibold text-[#34495e]">
+              Meal time (local)
+              <MealTimeSelect
+                value={voiceDraft.time}
+                onChange={(value) => updateVoiceDraft("time", value)}
+              />
+            </label>
+            <label className="grid gap-1.5 text-sm font-semibold text-[#34495e] sm:col-span-2">
               Foods and portions (one per line or comma separated)
               <textarea
                 value={voiceDraft.foodsText}
@@ -425,19 +499,62 @@ export function VoiceMealEntry({
             </label>
           </div>
           <div className="grid gap-4 rounded-lg border border-[#cfe0f2] bg-[#f7fbff] p-4">
-            <div className="flex items-start gap-3">
-              <Calculator className="mt-0.5 size-5 shrink-0 text-[#1268e8]" aria-hidden="true" />
-              <div>
-                <p className="text-sm font-semibold text-[#0b1f33]">Estimated nutrition</p>
-                <p className="mt-1 text-xs leading-5 text-[#64768a]">
-                  {voiceDraft.nutritionEstimate.matchedFoodCount} of{" "}
-                  {voiceDraft.nutritionEstimate.totalFoodCount} foods matched the local
-                  reference. Unmatched foods are excluded from the totals.
-                </p>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex items-start gap-3">
+                <Calculator className="mt-0.5 size-5 shrink-0 text-[#1268e8]" aria-hidden="true" />
+                <div>
+                  <p className="text-sm font-semibold text-[#0b1f33]">Estimated nutrition</p>
+                  <p className="mt-1 text-xs leading-5 text-[#64768a]">
+                    {voiceDraft.nutritionEdited
+                      ? "These values include your edits and still require review."
+                      : `${voiceDraft.nutritionEstimate.matchedFoodCount} of ${voiceDraft.nutritionEstimate.totalFoodCount} foods matched the local reference. Unmatched foods are excluded from the totals.`}
+                  </p>
+                </div>
               </div>
+              <button
+                type="button"
+                onClick={() => setNutritionEditing((current) => !current)}
+                aria-expanded={nutritionEditing}
+                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-[#b8d3f0] bg-white px-3 text-xs font-semibold text-[#0e5ab7] hover:bg-[#edf5ff] sm:shrink-0"
+              >
+                <Pencil className="size-4" aria-hidden="true" />
+                {nutritionEditing
+                  ? "Done editing"
+                  : voiceDraft.nutritionEstimate.matchedFoodCount > 0
+                    ? "Edit nutrition"
+                    : "Enter nutrition"}
+              </button>
             </div>
 
-            {voiceDraft.nutritionEstimate.matchedFoodCount > 0 ? (
+            {nutritionEditing ? (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+                <NutritionInput
+                  label="Calories"
+                  value={voiceDraft.nutritionEstimate.totals.calories}
+                  onChange={(value) => updateNutritionTotal("calories", value)}
+                />
+                <NutritionInput
+                  label="Carbs (g)"
+                  value={voiceDraft.nutritionEstimate.totals.carbohydratesGrams}
+                  onChange={(value) => updateNutritionTotal("carbohydratesGrams", value)}
+                />
+                <NutritionInput
+                  label="Protein (g)"
+                  value={voiceDraft.nutritionEstimate.totals.proteinGrams}
+                  onChange={(value) => updateNutritionTotal("proteinGrams", value)}
+                />
+                <NutritionInput
+                  label="Fat (g)"
+                  value={voiceDraft.nutritionEstimate.totals.fatGrams}
+                  onChange={(value) => updateNutritionTotal("fatGrams", value)}
+                />
+                <NutritionInput
+                  label="Fiber (g)"
+                  value={voiceDraft.nutritionEstimate.totals.fiberGrams}
+                  onChange={(value) => updateNutritionTotal("fiberGrams", value)}
+                />
+              </div>
+            ) : voiceDraft.nutritionEstimate.matchedFoodCount > 0 || voiceDraft.nutritionEdited ? (
               <dl className="grid grid-cols-2 gap-2 text-center sm:grid-cols-5">
                 <NutritionMetric label="Calories" value={voiceDraft.nutritionEstimate.totals.calories} />
                 <NutritionMetric label="Carbs" value={voiceDraft.nutritionEstimate.totals.carbohydratesGrams} unit="g" />
@@ -494,10 +611,13 @@ export function VoiceMealEntry({
               . This is not a live USDA integration. Values are estimates and require review.
             </p>
           </div>
-          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-end">
             <button
               type="button"
-              onClick={() => setVoiceDraft(undefined)}
+              onClick={() => {
+                setVoiceDraft(undefined);
+                setNutritionEditing(false);
+              }}
               className="h-11 rounded-lg border border-[#cbd8e4] px-4 text-sm font-semibold text-[#34495e] hover:bg-[#f7fafc]"
             >
               Discard draft
@@ -505,9 +625,18 @@ export function VoiceMealEntry({
             <button
               type="button"
               onClick={applyVoiceDraft}
-              className="h-11 rounded-lg bg-[#1268e8] px-4 text-sm font-semibold text-white hover:bg-[#0f57c3]"
+              disabled={!draftHasMeal}
+              className="h-11 rounded-lg border border-[#b8d3f0] bg-white px-4 text-sm font-semibold text-[#0e5ab7] hover:bg-[#edf5ff] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Apply to meal form
+              Continue in full form
+            </button>
+            <button
+              type="button"
+              onClick={addVoiceDraft}
+              disabled={!draftHasMeal}
+              className="h-11 rounded-lg bg-[#1268e8] px-4 text-sm font-semibold text-white hover:bg-[#0f57c3] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Add to session
             </button>
           </div>
           <p className="text-[11px] leading-5 text-[#718096]">
@@ -538,5 +667,31 @@ function NutritionMetric({
         {unit ? ` ${unit}` : ""}
       </dd>
     </div>
+  );
+}
+
+function NutritionInput({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="grid gap-1.5 text-xs font-semibold text-[#526477]">
+      {label}
+      <input
+        type="number"
+        inputMode="decimal"
+        step="any"
+        min="0"
+        max="10000"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="h-11 min-w-0 rounded-lg border border-[#b8d3f0] bg-white px-3 text-sm font-normal text-[#0b1f33]"
+      />
+    </label>
   );
 }
