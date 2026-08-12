@@ -69,6 +69,10 @@ test("keeps the AI foundation evidence-first and reviewable", async () => {
   assert.match(voiceEntry, /Nothing is saved yet/);
   assert.match(voiceEntry, /Estimated nutrition/);
   assert.match(voiceEntry, /Edit nutrition/);
+  assert.match(voiceEntry, /Edit ingredient/);
+  assert.match(voiceEntry, /Closest foods in the local reference/);
+  assert.match(voiceEntry, /Update ingredient/);
+  assert.match(voiceEntry, /not automatic substitutions/);
   assert.match(voiceEntry, /Continue in full form/);
   assert.match(voiceEntry, /Add to session/);
   assert.match(voiceEntry, /Press once to start recording/);
@@ -87,7 +91,9 @@ test("keeps the AI foundation evidence-first and reviewable", async () => {
   assert.match(localModel, /parseMealTranscriptExtraction/);
   assert.match(localModelProvider, /new Worker/);
   assert.match(nutritionEstimator, /estimateLocalNutrition/);
+  assert.match(nutritionEstimator, /findLocalNutritionSuggestions/);
   assert.match(nutritionEstimator, /usedDefaultPortion/);
+  assert.match(demoMeals, /voiceDraft\.foodsEdited/);
   assert.match(nutritionReference, /usda-fdc-sr-legacy-local-v1/);
   assert.match(nutritionReference, /fdcId: 172187/);
   assert.doesNotMatch(aiPanel, /insulin dose|medication dose|treatment recommendation/i);

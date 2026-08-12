@@ -40,6 +40,13 @@ export type LocalNutritionFoodEstimate = {
   unresolvedReason?: string;
 };
 
+export type LocalNutritionSuggestion = {
+  fdcId: number;
+  name: string;
+  suggestedInput: string;
+  similarity: number;
+};
+
 export type LocalNutritionEstimate = {
   foods: LocalNutritionFoodEstimate[];
   totals: MacroNutrients;

@@ -317,7 +317,7 @@ function mealDraftFromVoice(voiceDraft: AppliedBrowserVoiceMealDraft): DemoMealD
     fat: hasNutrition ? nutrition.totals.fatGrams : undefined,
     fiber: hasNutrition ? nutrition.totals.fiberGrams : undefined,
     source: "voice-local-ai",
-    nutritionSource: voiceDraft.nutritionEdited
+    nutritionSource: voiceDraft.nutritionEdited || voiceDraft.foodsEdited
       ? hasReferenceEstimate
         ? "reference-corrected"
         : "manual"
