@@ -85,6 +85,7 @@ test("keeps the AI foundation evidence-first and reviewable", async () => {
   assert.match(browserSpeech, /recognition\.continuous = true/);
   assert.match(localModelProvider, /groundedFallback/);
   assert.match(localModel, /one foods array item for every explicitly stated food/);
+  assert.match(localModel, /may omit all punctuation and connector words/);
   assert.equal(voiceEntry.match(/step="any"/g)?.length, 1);
   assert.equal(voiceEntry.match(/inputMode="decimal"/g)?.length, 1);
   assert.match(demoMeals, /MealTimeSelect/);
