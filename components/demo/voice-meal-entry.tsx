@@ -26,6 +26,7 @@ import {
   estimateLocalNutrition,
   splitFoodDescriptions,
 } from "@/services/local-nutrition-estimator";
+import { deriveMealNameFromFoods } from "@/services/meal-transcript-extraction";
 import type { LocalNutritionEstimate } from "@/types/nutrition";
 import type {
   BrowserSpeechSupport,
@@ -39,6 +40,7 @@ type VoiceDraft = {
   foodsText: string;
   generatedAt: string;
   edited: boolean;
+  mealNameEdited: boolean;
   nutritionEstimate: LocalNutritionEstimate;
 };
 
@@ -180,6 +182,7 @@ export function VoiceMealEntry({
         foodsText: extraction.foods.join(", "),
         generatedAt: new Date().toISOString(),
         edited: false,
+        mealNameEdited: false,
         nutritionEstimate,
       });
       setActionMessage("Review the local model's draft before applying it to the meal form.");
@@ -190,6 +193,7 @@ export function VoiceMealEntry({
         foodsText: "",
         generatedAt: new Date().toISOString(),
         edited: false,
+        mealNameEdited: false,
         nutritionEstimate: estimateLocalNutrition([]),
       });
       setActionMessage(
@@ -203,19 +207,22 @@ export function VoiceMealEntry({
   }
 
   function updateVoiceDraft(field: "mealName" | "foodsText", value: string) {
-    setVoiceDraft((current) =>
-      current
-        ? {
-            ...current,
-            [field]: value,
-            edited: true,
-            nutritionEstimate:
-              field === "foodsText"
-                ? estimateLocalNutrition(splitFoodDescriptions(value))
-                : current.nutritionEstimate,
-          }
-        : current,
-    );
+    setVoiceDraft((current) => {
+      if (!current) return current;
+      if (field === "mealName") {
+        return { ...current, mealName: value, mealNameEdited: true, edited: true };
+      }
+      const foods = splitFoodDescriptions(value);
+      return {
+        ...current,
+        foodsText: value,
+        mealName: current.mealNameEdited
+          ? current.mealName
+          : (deriveMealNameFromFoods(foods) ?? ""),
+        edited: true,
+        nutritionEstimate: estimateLocalNutrition(foods),
+      };
+    });
   }
 
   function applyVoiceDraft() {
@@ -397,13 +404,13 @@ export function VoiceMealEntry({
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="grid gap-1.5 text-sm font-semibold text-[#34495e]">
-              Suggested meal name
+              Meal name (from foods)
               <input
                 value={voiceDraft.mealName}
                 onChange={(event) => updateVoiceDraft("mealName", event.target.value)}
                 maxLength={80}
                 className="h-11 rounded-lg border border-[#cbd8e4] bg-white px-3 font-normal text-[#0b1f33]"
-                placeholder="Enter a meal name"
+                placeholder="Food name or food combination"
               />
             </label>
             <label className="grid gap-1.5 text-sm font-semibold text-[#34495e]">
