@@ -91,6 +91,35 @@ test("separates repeated portions in an unpunctuated speech transcript", () => {
   assert.equal(fallbackResult.mealName, "Rice, Salmon, Lettuce");
 });
 
+test("removes spoken meal context and repairs a misheard grams unit", () => {
+  const misheardTranscript =
+    "Today I had nine grams of brown rice 20 grand salmon and a cup of lettuce";
+  const combinedModelOutput =
+    '{"mealName":"Brown Rice Salmon Lettuce","foods":["Today I had","nine grams of brown rice 20 grams salmon","a cup of lettuce"]}';
+
+  const messages = buildMealTranscriptMessages(misheardTranscript);
+  const modelResult = parseMealTranscriptExtraction(combinedModelOutput, misheardTranscript);
+  const fallbackResult = extractGroundedMealFromTranscript(misheardTranscript);
+  const expectedFoods = [
+    "nine grams of brown rice",
+    "20 grams salmon",
+    "a cup of lettuce",
+  ];
+
+  assert.match(messages[1].content, /20 grams salmon/);
+  assert.doesNotMatch(messages[1].content, /20 grand salmon/);
+  assert.deepEqual(modelResult.foods, expectedFoods);
+  assert.deepEqual(fallbackResult.foods, ["nine grams of brown rice", ...expectedFoods.slice(1)]);
+  assert.equal(modelResult.mealName, "Brown Rice, Salmon, Lettuce");
+  assert.equal(fallbackResult.mealName, "Brown Rice, Salmon, Lettuce");
+
+  const nutrition = estimateLocalNutrition(modelResult.foods);
+  assert.equal(nutrition.matchedFoodCount, 2);
+  assert.equal(nutrition.foods[0]?.estimatedGrams, 9);
+  assert.equal(nutrition.foods[1]?.estimatedGrams, 20);
+  assert.equal(nutrition.foods[2]?.matchedName, undefined);
+});
+
 test("accepts transcript-grounded meal details", () => {
   const result = parseMealTranscriptExtraction(
     '```json\n{"mealName":"Salmon lunch","foods":["brown rice","salmon","roasted broccoli"]}\n```',

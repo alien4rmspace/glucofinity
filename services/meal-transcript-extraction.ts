@@ -84,17 +84,24 @@ const CONNECTOR_WORDS = new Set(["and", "of"]);
 
 const SPOKEN_NUMBER_PATTERN =
   "(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred)";
+const SPOKEN_QUANTITY_PATTERN =
+  `(?:a|an|half|quarter|\\d+(?:\\.\\d+)?|${SPOKEN_NUMBER_PATTERN}(?:[\\s-]+${SPOKEN_NUMBER_PATTERN})*(?:\\s+and\\s+(?:a\\s+)?half)?)`;
 const PORTION_UNIT_PATTERN =
   "(?:grams?|g|ounces?|oz|cups?|tablespoons?|tbsp|teaspoons?|tsp|slices?|pieces?|items?|containers?)";
 const UNPUNCTUATED_PORTION_START = new RegExp(
-  `\\b(?:a|an|half|quarter|\\d+(?:\\.\\d+)?|${SPOKEN_NUMBER_PATTERN}(?:[\\s-]+${SPOKEN_NUMBER_PATTERN})*(?:\\s+and\\s+(?:a\\s+)?half)?)\\s+${PORTION_UNIT_PATTERN}\\b`,
+  `\\b${SPOKEN_QUANTITY_PATTERN}\\s+${PORTION_UNIT_PATTERN}\\b`,
+  "gi",
+);
+const MISHEARD_GRAM_UNIT = new RegExp(
+  `\\b(${SPOKEN_QUANTITY_PATTERN})\\s+grands?\\b`,
   "gi",
 );
 
 const LEADING_MEAL_CONTEXT = [
+  /^(?:today|tonight|this\s+(?:morning|afternoon|evening))\b\s*,?\s*/i,
   /^(?:for|at)\s+(?:breakfast|brunch|lunch|dinner|supper|snack|my meal)\s*,?\s*/i,
   /^(?:my\s+(?:breakfast|brunch|lunch|dinner|supper|snack|meal)\s+(?:was|included)\s+)/i,
-  /^(?:(?:i|we)\s+)?(?:had|ate|have|am having|are having)\s+/i,
+  /^(?:(?:i|we)\s+)?(?:had|ate|have|am having|are having)(?:\s+|$)/i,
 ];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -154,6 +161,13 @@ function removeLeadingMealContext(value: string): string {
   return reviewed.trim();
 }
 
+function normalizeSpeechPortionUnits(value: string): string {
+  return value.replace(
+    MISHEARD_GRAM_UNIT,
+    (_match, quantity: string) => `${quantity} grams`,
+  );
+}
+
 function splitUnpunctuatedPortionClauses(value: string): string[] {
   const boundaries = [0];
   UNPUNCTUATED_PORTION_START.lastIndex = 0;
@@ -199,7 +213,7 @@ export function deriveMealNameFromFoods(foods: readonly string[]): string | unde
 export function extractGroundedMealFromTranscript(
   transcript: string,
 ): MealTranscriptExtraction {
-  const reviewedTranscript = validateMealTranscript(transcript);
+  const reviewedTranscript = normalizeSpeechPortionUnits(validateMealTranscript(transcript));
   const foods = splitFoodClauses(reviewedTranscript).filter(
     (food, index, values) =>
       values.findIndex(
@@ -258,7 +272,7 @@ export function validateMealTranscript(transcript: string): string {
 }
 
 export function buildMealTranscriptMessages(transcript: string) {
-  const reviewedTranscript = validateMealTranscript(transcript);
+  const reviewedTranscript = normalizeSpeechPortionUnits(validateMealTranscript(transcript));
   return [
     {
       role: "system" as const,
@@ -276,7 +290,7 @@ export function parseMealTranscriptExtraction(
   modelOutput: string,
   transcript: string,
 ): MealTranscriptExtraction {
-  const reviewedTranscript = validateMealTranscript(transcript);
+  const reviewedTranscript = normalizeSpeechPortionUnits(validateMealTranscript(transcript));
   let parsed: unknown;
   try {
     parsed = JSON.parse(extractJsonObject(modelOutput));
