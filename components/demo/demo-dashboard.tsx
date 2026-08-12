@@ -57,7 +57,7 @@ export function DemoDashboard({
       </div>
 
       <DemoNotice icon={<Database className="size-5" />} title="Mock data is active" tone="blue">
-        The values are fixed educational examples, so every visitor sees the same demonstration.
+        The values are normalized fictional examples with source provenance, so every visitor sees the same meal-response demonstration.
       </DemoNotice>
 
       <DemoCard className="overflow-hidden">
@@ -84,7 +84,7 @@ export function DemoDashboard({
               <div><p className="text-xs font-bold uppercase text-[#718096]">Meals logged</p><p className="mt-1 text-2xl font-semibold text-[#0b1f33]">{mealCount}</p></div>
             </div>
             <button type="button" onClick={() => onNavigate("meals")} className="mt-5 inline-flex items-center gap-1.5 self-end text-sm font-semibold text-[#1268e8] hover:text-[#0f57c3]">
-              Review meal context <ArrowRight className="size-4" aria-hidden="true" />
+              Review meal response metrics <ArrowRight className="size-4" aria-hidden="true" />
             </button>
           </div>
         </div>

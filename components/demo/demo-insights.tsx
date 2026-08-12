@@ -1,8 +1,10 @@
 "use client";
 
-import { Info, Sparkles } from "lucide-react";
+import { Activity, Info, Sparkles } from "lucide-react";
 import { DemoCard, DemoEmptyState, DemoNotice } from "@/components/demo/demo-ui";
+import { demoGlucoseReadings } from "@/data/demo-data";
 import { insights } from "@/data/mock-data";
+import { analyzeMealResponses } from "@/services/meal-glucose-response";
 import type { DemoMeal, DemoSettings, DemoTab } from "@/types/demo";
 
 export function DemoInsights({
@@ -24,6 +26,12 @@ export function DemoInsights({
     );
   }
 
+  const mealResponses = analyzeMealResponses(meals, demoGlucoseReadings);
+  const observedRises = mealResponses
+    .map((response) => response.glucoseRiseMgDl)
+    .filter((value): value is number => value !== undefined);
+  const goodCoverageCount = mealResponses.filter((response) => response.dataQuality === "good").length;
+
   return (
     <div className="grid gap-6">
       <div>
@@ -35,6 +43,31 @@ export function DemoInsights({
       <DemoNotice icon={<Sparkles className="size-5" />} title="Simulated insight engine" tone="purple">
         No external AI service is connected. These fixed observations were written for the fictional demonstration dataset.
       </DemoNotice>
+
+      <DemoCard className="border-[#cfe0f3] bg-[#f8fbff] p-5 sm:p-6">
+        <div className="flex items-start gap-4">
+          <span className="grid size-10 shrink-0 place-items-center rounded-full bg-[#e5f8fb] text-[#147b8c]">
+            <Activity className="size-5" aria-hidden="true" />
+          </span>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-bold uppercase tracking-[0.06em] text-[#147b8c]">Computed meal-response summary</span>
+              <span className="rounded-full border border-[#cfe0f3] bg-white px-2 py-0.5 text-[10px] font-semibold text-[#64768a]">Prototype</span>
+            </div>
+            <h2 className="mt-3 text-lg font-semibold leading-7 text-[#0b1f33]">
+              {observedRises.length > 0
+                ? `Observed rises ranged from ${Math.round(Math.min(...observedRises))} to ${Math.round(Math.max(...observedRises))} mg/dL`
+                : "No meal-response rise could be calculated"}
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-[#526477]">
+              {observedRises.length > 0
+                ? `The displayed fictional meals had different surrounding glucose responses. ${goodCoverageCount} met the prototype's complete-coverage rules; differences may be related to meal composition, timing, movement, sleep, sampling, or other context.`
+                : "The current session meals do not have enough surrounding fictional readings. The prototype does not fill missing observations with generated values."}
+            </p>
+            <p className="mt-4 text-xs font-semibold text-[#718096]">Context: {mealResponses.length} meals checked against normalized mock readings</p>
+          </div>
+        </div>
+      </DemoCard>
 
       <div className="grid gap-4 lg:grid-cols-2">
         {insights.map((insight, index) => (

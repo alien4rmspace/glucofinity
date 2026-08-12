@@ -1,9 +1,10 @@
 "use client";
 
-import { Camera, Plus, Trash2, Utensils } from "lucide-react";
+import { Activity, Camera, Plus, Trash2, Utensils } from "lucide-react";
 import { type FormEvent, useState } from "react";
+import { MealResponseReview } from "@/components/demo/meal-response-review";
 import { DemoCard, DemoNotice, DemoSectionHeading } from "@/components/demo/demo-ui";
-import type { DemoMeal, DemoMealDraft } from "@/types/demo";
+import type { DemoMeal, DemoMealDraft, DemoSettings } from "@/types/demo";
 
 const emptyDraft: DemoMealDraft = {
   name: "",
@@ -17,16 +18,20 @@ const emptyDraft: DemoMealDraft = {
 
 export function DemoMeals({
   meals,
+  settings,
   onAddMeal,
   onDeleteMeal,
 }: {
   meals: DemoMeal[];
+  settings: DemoSettings;
   onAddMeal: (meal: DemoMealDraft) => void;
   onDeleteMeal: (id: string) => void;
 }) {
   const [formOpen, setFormOpen] = useState(false);
   const [draft, setDraft] = useState<DemoMealDraft>(emptyDraft);
   const [message, setMessage] = useState("");
+  const [selectedMealId, setSelectedMealId] = useState("meal-lunch");
+  const selectedMeal = meals.find((meal) => meal.id === selectedMealId);
 
   function simulateEstimate() {
     setDraft({
@@ -60,13 +65,25 @@ export function DemoMeals({
     setDraft((current) => ({ ...current, [field]: Number.isFinite(parsed) ? Math.max(0, parsed) : 0 }));
   }
 
+  function selectMeal(mealId: string) {
+    setSelectedMealId(mealId);
+    window.requestAnimationFrame(() => {
+      document.getElementById("meal-response-review")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+
+  function removeMeal(mealId: string) {
+    onDeleteMeal(mealId);
+    if (selectedMealId === mealId) setSelectedMealId("");
+  }
+
   return (
     <div className="grid gap-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#7257d9]">Meals</p>
           <h1 className="mt-2 text-3xl font-semibold text-[#0b1f33] sm:text-4xl">Review meal context</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-[#64768a]">Add a meal manually or load a simulated nutrition estimate. Entries exist only in this open browser session.</p>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-[#64768a]">Review computed response metrics for seeded meals, or add a session-only meal manually. Entries exist only in this open browser session.</p>
         </div>
         <button type="button" onClick={() => setFormOpen((current) => !current)} className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#1268e8] px-4 text-sm font-semibold text-white hover:bg-[#0f57c3]" aria-expanded={formOpen}>
           <Plus className="size-4" aria-hidden="true" /> {formOpen ? "Close form" : "Add meal"}
@@ -122,6 +139,16 @@ export function DemoMeals({
         </DemoCard>
       ) : null}
 
+      {selectedMeal ? (
+        <section
+          id="meal-response-review"
+          aria-label={`Glucose response for ${selectedMeal.name}`}
+          className="scroll-mt-24"
+        >
+          <MealResponseReview meal={selectedMeal} settings={settings} />
+        </section>
+      ) : null}
+
       <section className="grid gap-4" aria-labelledby="meal-log-heading">
         <DemoSectionHeading id="meal-log-heading" title="Meal log" description={`${meals.length} fictional or session-only entries`} />
         {meals.length === 0 ? (
@@ -137,9 +164,21 @@ export function DemoMeals({
                 <div className="flex items-start gap-4">
                   <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-[#f0edff] text-[#7257d9]"><Utensils className="size-5" aria-hidden="true" /></span>
                   <div className="min-w-0 flex-1">
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div><h3 className="font-semibold text-[#0b1f33]">{meal.name}</h3><p className="mt-1 text-xs text-[#718096]">{meal.time} · {meal.source === "simulated-estimate" ? "Simulated estimate" : meal.source === "manual" ? "Session entry" : "Fictional seed entry"}</p></div>
-                      <button type="button" onClick={() => onDeleteMeal(meal.id)} aria-label={`Remove ${meal.name}`} className="grid size-9 shrink-0 place-items-center rounded-lg border border-[#ead3d3] text-[#a43b3b] hover:bg-[#fff1f1]"><Trash2 className="size-4" aria-hidden="true" /></button>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <button
+                          type="button"
+                          aria-pressed={selectedMealId === meal.id}
+                          aria-label={selectedMealId === meal.id ? `Glucose response selected for ${meal.name}` : `Review glucose response for ${meal.name}`}
+                          onClick={() => selectMeal(meal.id)}
+                          className={`inline-flex h-9 items-center justify-center gap-2 rounded-lg border px-3 text-xs font-semibold ${selectedMealId === meal.id ? "border-[#b8d3f0] bg-[#edf5ff] text-[#0e5ab7]" : "border-[#dce5ee] text-[#526477] hover:bg-[#f2f7fb]"}`}
+                        >
+                          <Activity className="size-4" aria-hidden="true" />
+                          {selectedMealId === meal.id ? "Response selected" : "Review response"}
+                        </button>
+                        <button type="button" onClick={() => removeMeal(meal.id)} aria-label={`Remove ${meal.name}`} className="grid size-9 shrink-0 place-items-center rounded-lg border border-[#ead3d3] text-[#a43b3b] hover:bg-[#fff1f1]"><Trash2 className="size-4" aria-hidden="true" /></button>
+                      </div>
                     </div>
                     <dl className="mt-4 grid grid-cols-3 gap-2 text-center">
                       <div className="rounded-lg bg-[#f7fafc] p-2"><dt className="text-[11px] text-[#718096]">Carbs</dt><dd className="mt-1 text-sm font-semibold text-[#0b1f33]">{meal.carbohydrates} g</dd></div>

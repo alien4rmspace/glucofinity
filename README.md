@@ -75,6 +75,8 @@ The page demonstrates these concepts without claiming they are completed product
 - A 24-hour glucose dashboard with target-range context
 - Meal-photo recognition estimates and editable carbohydrate values
 - A post-meal glucose response view
+- A meal-centered response window with baseline, peak, rise, timing, 1-hour and 2-hour values, incremental area, return-near-baseline timing, and explicit data-quality states
+- Stable mock-source provenance and visible gaps when surrounding readings are incomplete
 - AI-assisted pattern summaries with cautious correlation language
 - Planned CGM and Apple Health integrations
 - Planned time-series, XGBoost-style, vision-language, and local language-model responsibilities
