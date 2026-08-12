@@ -2,6 +2,7 @@ export type DemoTab = "dashboard" | "meals" | "trends" | "insights" | "settings"
 
 export type DemoMeal = {
   id: string;
+  timestamp: string;
   name: string;
   time: string;
   carbohydrates: number;
@@ -17,4 +18,4 @@ export type DemoSettings = {
   targetHigh: number;
 };
 
-export type DemoMealDraft = Omit<DemoMeal, "id">;
+export type DemoMealDraft = Omit<DemoMeal, "id" | "timestamp">;

@@ -69,6 +69,8 @@ test("exports the dedicated interactive demo route", async () => {
   assert.match(demoHtml, /<title>Interactive Demo \| GlucoFinity<\/title>/i);
   assert.match(demoHtml, /Interactive educational prototype/);
   assert.match(demoHtml, /Your fictional day at a glance/);
+  assert.match(demoHtml, /normalized fictional examples with source provenance/i);
+  assert.match(demoHtml, /Review meal response metrics/i);
   assert.match(demoHtml, /All readings, meals, calculations, and observations are fictional/i);
   assert.match(demoHtml, /Not for diagnosis, treatment, medication, or insulin decisions/i);
   assert.doesNotMatch(demoHtml, /connected to a real sensor/i);

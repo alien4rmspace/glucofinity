@@ -8,6 +8,35 @@ export type PostMealPoint = {
   glucose: number;
 };
 
+export type DemoGlucoseReadingSource =
+  | "mock"
+  | "healthkit"
+  | "health-connect"
+  | "import";
+
+export type DemoGlucoseReading = {
+  id: string;
+  timestamp: string;
+  valueMgDl: number;
+  source: DemoGlucoseReadingSource;
+  deviceName?: string;
+  sourceRecordId?: string;
+};
+
+export type MealGlucoseResponse = {
+  mealId: string;
+  baselineGlucoseMgDl?: number;
+  peakGlucoseMgDl?: number;
+  glucoseRiseMgDl?: number;
+  timeToPeakMinutes?: number;
+  glucoseAt60MinutesMgDl?: number;
+  glucoseAt120MinutesMgDl?: number;
+  incrementalAuc?: number;
+  returnToBaselineMinutes?: number;
+  sampleCount: number;
+  dataQuality: "good" | "limited" | "insufficient";
+};
+
 export type Feature = {
   title: string;
   description: string;

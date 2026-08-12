@@ -50,8 +50,15 @@ export function DemoSettingsPanel({
 
       <section className="grid gap-4" aria-labelledby="data-source-heading">
         <DemoSectionHeading id="data-source-heading" title="Data source" />
-        <DemoCard className="p-5 sm:p-6">
-          <div className="flex items-start gap-4">
+        <DemoCard className="divide-y divide-[#e4ebf2]">
+          <div className="flex items-start gap-4 p-5 sm:p-6">
+            <span className="grid size-11 shrink-0 place-items-center rounded-full bg-[#e5f8fb] text-[#147b8c]"><Database className="size-5" aria-hidden="true" /></span>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-semibold text-[#0b1f33]">Deterministic demo readings</h3><span className="text-xs font-semibold text-[#087f6a]">Active in this demo</span></div>
+              <p className="mt-2 text-sm leading-6 text-[#64768a]">Normalized fictional mg/dL samples retain a mock source label, stable source-record ID, timestamp, and generator name. They never leave this static site.</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-4 p-5 sm:p-6">
             <span className="grid size-11 shrink-0 place-items-center rounded-full bg-[#fff1f1] text-[#b33f3f]"><HeartPulse className="size-5" aria-hidden="true" /></span>
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-semibold text-[#0b1f33]">Apple Health</h3><span className="text-xs font-semibold text-[#b33f3f]">Not connected</span></div>

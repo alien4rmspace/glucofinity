@@ -33,7 +33,7 @@ export function DemoApp() {
   function addMeal(draft: DemoMealDraft) {
     const id = `session-meal-${nextMealId.current}`;
     nextMealId.current += 1;
-    setMeals((current) => [{ ...draft, id }, ...current]);
+    setMeals((current) => [{ ...draft, id, timestamp: sessionMealTimestamp(draft.time) }, ...current]);
   }
 
   function resetDemo() {
@@ -44,8 +44,8 @@ export function DemoApp() {
 
   return (
     <div className="mx-auto grid max-w-7xl gap-5 px-4 py-6 sm:px-6 sm:py-8 lg:grid-cols-[14rem_minmax(0,1fr)] lg:items-start lg:px-8 lg:py-10">
-      <aside className="rounded-lg border border-[#dce5ee] bg-white p-2 lg:sticky lg:top-24" aria-label="Demo sections">
-        <nav className="flex gap-1 overflow-x-auto lg:grid" aria-label="Interactive prototype navigation">
+      <aside className="min-w-0 max-w-full rounded-lg border border-[#dce5ee] bg-white p-2 lg:sticky lg:top-24" aria-label="Demo sections">
+        <nav className="flex w-full min-w-0 gap-1 overflow-x-auto lg:grid" aria-label="Interactive prototype navigation">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const selected = activeTab === tab.id;
@@ -73,11 +73,24 @@ export function DemoApp() {
 
       <section id="demo-panel" aria-labelledby={`demo-tab-${activeTab}`} className="min-w-0">
         {activeTab === "dashboard" ? <DemoDashboard settings={settings} mealCount={meals.length} onNavigate={navigate} /> : null}
-        {activeTab === "meals" ? <DemoMeals meals={meals} onAddMeal={addMeal} onDeleteMeal={(id) => setMeals((current) => current.filter((meal) => meal.id !== id))} /> : null}
+        {activeTab === "meals" ? <DemoMeals meals={meals} settings={settings} onAddMeal={addMeal} onDeleteMeal={(id) => setMeals((current) => current.filter((meal) => meal.id !== id))} /> : null}
         {activeTab === "trends" ? <DemoTrends settings={settings} meals={meals} onNavigate={navigate} /> : null}
         {activeTab === "insights" ? <DemoInsights settings={settings} meals={meals} onNavigate={navigate} /> : null}
         {activeTab === "settings" ? <DemoSettingsPanel settings={settings} onChange={setSettings} onReset={resetDemo} /> : null}
       </section>
     </div>
   );
+}
+
+function sessionMealTimestamp(time: string): string {
+  const match = time.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (!match) return "2026-08-10T12:00:00.000Z";
+  const rawHours = Number(match[1]);
+  const minutes = Number(match[2]);
+  if (rawHours < 1 || rawHours > 12 || minutes < 0 || minutes > 59) {
+    return "2026-08-10T12:00:00.000Z";
+  }
+  const meridiem = match[3].toUpperCase();
+  const hours = (rawHours % 12) + (meridiem === "PM" ? 12 : 0);
+  return `2026-08-10T${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:00.000Z`;
 }
