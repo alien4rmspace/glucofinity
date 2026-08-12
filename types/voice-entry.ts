@@ -1,15 +1,3 @@
-export type BrowserSpeechAvailability =
-  | "checking"
-  | "available"
-  | "downloadable"
-  | "downloading"
-  | "unavailable";
-
-export type BrowserSpeechSupport = {
-  availability: BrowserSpeechAvailability;
-  message: string;
-};
-
 export type MealTranscriptExtraction = {
   mealName?: string;
   foods: string[];
@@ -29,4 +17,14 @@ export type LfmWorkerResponse =
   | { type: "progress"; progress: number }
   | { type: "ready" }
   | { type: "result"; requestId: number; output: string }
+  | { type: "error"; requestId?: number; message: string };
+
+export type WhisperWorkerRequest =
+  | { type: "prepare" }
+  | { type: "transcribe"; requestId: number; audio: Float32Array };
+
+export type WhisperWorkerResponse =
+  | { type: "progress"; progress: number }
+  | { type: "ready" }
+  | { type: "result"; requestId: number; transcript: string }
   | { type: "error"; requestId?: number; message: string };
