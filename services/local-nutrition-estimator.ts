@@ -117,6 +117,33 @@ const FOOD_QUERY_STOP_WORDS = new Set([
   "containers",
 ]);
 
+const FOOD_FAMILY_MATCHES = [
+  {
+    keywords: ["lettuce", "kale", "arugula", "cabbage", "greens", "salad"],
+    fdcIds: [168462, 170472, 169967],
+  },
+  {
+    keywords: ["quinoa", "barley", "farro", "couscous", "grain", "grains"],
+    fdcIds: [169704, 168878, 171675, 169737],
+  },
+  {
+    keywords: ["fish", "tuna", "cod", "tilapia", "trout", "shrimp", "seafood"],
+    fdcIds: [175168],
+  },
+  {
+    keywords: ["pork", "steak", "meat", "protein"],
+    fdcIds: [171794, 171477, 171496, 172448],
+  },
+  {
+    keywords: ["berry", "berries", "orange", "pear", "peach", "fruit"],
+    fdcIds: [171688, 173944],
+  },
+  {
+    keywords: ["cream", "dairy", "cottage", "mozzarella"],
+    fdcIds: [170894, 171265, 173414],
+  },
+] as const;
+
 function normalize(value: string): string {
   return value
     .toLocaleLowerCase()
@@ -208,15 +235,37 @@ export function findLocalNutritionSuggestions(
     }
   }
 
-  return [...bestByFood.values()]
-    .filter(({ similarity }) => similarity >= 0.55)
-    .sort((left, right) => right.similarity - left.similarity)
+  const ranked = [...bestByFood.values()].sort(
+    (left, right) => right.similarity - left.similarity,
+  );
+  const familyFoodIds = FOOD_FAMILY_MATCHES.filter(({ keywords }) =>
+    keywords.some((keyword) => queryWords.includes(keyword)),
+  ).flatMap(({ fdcIds }) => [...fdcIds]);
+  const familyFoodIdSet = new Set<number>(familyFoodIds);
+  const familyCandidates = familyFoodIds
+    .map((fdcId) => bestByFood.get(fdcId))
+    .filter((candidate): candidate is NonNullable<typeof candidate> => Boolean(candidate));
+  const closeTextCandidates = ranked.filter(({ similarity }) => similarity >= 0.55);
+  const ordered =
+    closeTextCandidates.length > 0
+      ? closeTextCandidates
+      : familyCandidates.length > 0
+        ? familyCandidates
+        : ranked;
+
+  return ordered
     .slice(0, Math.min(limit, 5))
     .map(({ food, alias, similarity }) => ({
       fdcId: food.fdcId,
       name: food.name,
       suggestedInput: replaceFoodWords(input, queryWords, alias),
       similarity: Math.round(similarity * 100) / 100,
+      matchBasis:
+        similarity >= 0.55
+          ? "text"
+          : familyFoodIdSet.has(food.fdcId)
+            ? "food-family"
+            : "available-option",
     }));
 }
 

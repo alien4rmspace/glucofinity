@@ -672,6 +672,13 @@ export function VoiceMealEntry({
                   ? []
                   : findLocalNutritionSuggestions(food.input);
                 const editingThisFood = editingFoodIndex === index;
+                const suggestionHeading = suggestions.some(
+                  ({ matchBasis }) => matchBasis === "text",
+                )
+                  ? "Closest foods in the local reference"
+                  : suggestions.some(({ matchBasis }) => matchBasis === "food-family")
+                    ? "Closest food-family options in the local reference"
+                    : "Closest available options in the local reference";
                 return (
                   <li
                     key={`${food.input}-${index}`}
@@ -739,7 +746,7 @@ export function VoiceMealEntry({
                         {suggestions.length > 0 ? (
                           <div>
                             <p className="text-xs font-semibold text-[#34495e]">
-                              Closest foods in the local reference
+                              {suggestionHeading}
                             </p>
                             <div className="mt-2 flex flex-wrap gap-2">
                               {suggestions.map((suggestion) => (
@@ -755,14 +762,21 @@ export function VoiceMealEntry({
                                     Use {suggestion.name}
                                   </span>
                                   <span className="mt-0.5 block text-[11px] text-[#64768a]">
+                                    {suggestion.matchBasis === "text"
+                                      ? "Close text match"
+                                      : suggestion.matchBasis === "food-family"
+                                        ? "Related food family"
+                                        : "Broader local option"}
+                                    {" · "}
                                     {suggestion.suggestedInput}
                                   </span>
                                 </button>
                               ))}
                             </div>
                             <p className="mt-2 text-[11px] leading-5 text-[#718096]">
-                              Suggestions are local text matches, not automatic substitutions.
-                              Choose one only if it matches what you ate.
+                              Suggestions are ranked local choices, not equivalents or automatic
+                              substitutions. Broader options may differ significantly; choose one
+                              only if it matches what you ate.
                             </p>
                           </div>
                         ) : null}

@@ -45,6 +45,7 @@ export type LocalNutritionSuggestion = {
   name: string;
   suggestedInput: string;
   similarity: number;
+  matchBasis: "text" | "food-family" | "available-option";
 };
 
 export type LocalNutritionEstimate = {
