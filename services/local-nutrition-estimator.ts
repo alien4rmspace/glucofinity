@@ -23,9 +23,39 @@ const NUMBER_WORDS: Readonly<Record<string, number>> = {
   six: 6,
   seven: 7,
   eight: 8,
+  nine: 9,
+  ten: 10,
+  eleven: 11,
+  twelve: 12,
+  thirteen: 13,
+  fourteen: 14,
+  fifteen: 15,
+  sixteen: 16,
+  seventeen: 17,
+  eighteen: 18,
+  nineteen: 19,
+  twenty: 20,
+  thirty: 30,
+  forty: 40,
+  fifty: 50,
+  sixty: 60,
+  seventy: 70,
+  eighty: 80,
+  ninety: 90,
   half: 0.5,
   quarter: 0.25,
 };
+
+const TENS_WORDS = new Set([
+  "twenty",
+  "thirty",
+  "forty",
+  "fifty",
+  "sixty",
+  "seventy",
+  "eighty",
+  "ninety",
+]);
 
 const UNIT_PATTERNS: readonly [ParsedUnit, RegExp][] = [
   ["cup", /\bcups?\b/],
@@ -88,8 +118,19 @@ function parseAmount(value: string): number | undefined {
   if (numeric) return Number(numeric[0]);
 
   const words = normalized.split(" ");
-  const amountWord = words.find((word) => NUMBER_WORDS[word] !== undefined);
-  return amountWord ? NUMBER_WORDS[amountWord] : undefined;
+  for (let index = 0; index < words.length; index += 1) {
+    const firstValue = NUMBER_WORDS[words[index]];
+    if (firstValue === undefined) continue;
+
+    let amount = firstValue;
+    const nextWord = words[index + 1];
+    const nextValue = NUMBER_WORDS[nextWord];
+    if (TENS_WORDS.has(words[index]) && nextValue !== undefined && nextValue < 10) {
+      amount += nextValue;
+    }
+    return amount;
+  }
+  return undefined;
 }
 
 function parseUnit(value: string): ParsedUnit | undefined {
