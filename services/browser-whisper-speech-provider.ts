@@ -8,6 +8,7 @@ export const WEB_WHISPER_PROVIDER_ID = "transformers-js-webgpu-v4.2.0";
 export const WEB_WHISPER_MODEL_ID = "distil-small.en-onnx-fp32-q4";
 
 const TARGET_SAMPLE_RATE = 16_000;
+const LIVE_PREVIEW_INTERVAL_MS = 4_000;
 
 type PendingRequest = {
   resolve: (value: string) => void;
@@ -26,6 +27,9 @@ class BrowserWhisperSpeechProvider {
   private mediaRecorder: MediaRecorder | undefined;
   private mediaStream: MediaStream | undefined;
   private recordedChunks: Blob[] = [];
+  private livePreviewTimer: number | undefined;
+  private livePreviewPromise: Promise<void> | undefined;
+  private liveTranscriptListener: ((transcript: string) => void) | undefined;
 
   getState(): LocalMealModelState {
     return this.state;
@@ -75,7 +79,7 @@ class BrowserWhisperSpeechProvider {
     return this.preparePromise;
   }
 
-  async startRecording(): Promise<void> {
+  async startRecording(onLiveTranscript?: (transcript: string) => void): Promise<void> {
     if (this.state.status !== "ready") throw new Error("Prepare local Distil-Whisper first.");
     if (this.mediaRecorder?.state === "recording") return;
 
@@ -91,10 +95,14 @@ class BrowserWhisperSpeechProvider {
     this.mediaStream = stream;
     this.mediaRecorder = recorder;
     this.recordedChunks = [];
+    this.liveTranscriptListener = onLiveTranscript;
     recorder.addEventListener("dataavailable", (event) => {
       if (event.data.size > 0) this.recordedChunks.push(event.data);
     });
     recorder.start(1_000);
+    this.livePreviewTimer = window.setInterval(() => {
+      this.startLivePreview(recorder);
+    }, LIVE_PREVIEW_INTERVAL_MS);
   }
 
   async stopRecordingAndTranscribe(): Promise<string> {
@@ -104,6 +112,8 @@ class BrowserWhisperSpeechProvider {
     }
 
     try {
+      this.stopLivePreviews();
+      const activePreview = this.livePreviewPromise;
       const blob = await new Promise<Blob>((resolve, reject) => {
         recorder.addEventListener(
           "stop",
@@ -118,6 +128,7 @@ class BrowserWhisperSpeechProvider {
         recorder.stop();
       });
       if (blob.size === 0) throw new Error("The recording did not contain any audio.");
+      await activePreview;
       const audio = await this.decodeAndResample(blob);
       return await this.transcribe(audio);
     } finally {
@@ -126,6 +137,7 @@ class BrowserWhisperSpeechProvider {
   }
 
   cancelRecording(): void {
+    this.stopLivePreviews();
     const recorder = this.mediaRecorder;
     if (recorder && recorder.state !== "inactive") recorder.stop();
     this.releaseRecording();
@@ -148,6 +160,41 @@ class BrowserWhisperSpeechProvider {
     source.start();
     const resampled = await offlineContext.startRendering();
     return new Float32Array(resampled.getChannelData(0));
+  }
+
+  private startLivePreview(recorder: MediaRecorder): void {
+    if (
+      this.livePreviewPromise ||
+      recorder !== this.mediaRecorder ||
+      recorder.state !== "recording" ||
+      this.recordedChunks.length === 0
+    ) {
+      return;
+    }
+
+    const previewBlob = new Blob([...this.recordedChunks], { type: recorder.mimeType });
+    this.livePreviewPromise = this.decodeAndResample(previewBlob)
+      .then((audio) => this.transcribe(audio))
+      .then((transcript) => {
+        if (recorder === this.mediaRecorder && recorder.state === "recording") {
+          this.liveTranscriptListener?.(transcript);
+        }
+      })
+      .catch(() => {
+        // A partial MediaRecorder blob may not be decodable in every browser.
+        // The complete recording still receives a final transcription after Stop.
+      })
+      .finally(() => {
+        this.livePreviewPromise = undefined;
+      });
+  }
+
+  private stopLivePreviews(): void {
+    if (this.livePreviewTimer !== undefined) {
+      window.clearInterval(this.livePreviewTimer);
+      this.livePreviewTimer = undefined;
+    }
+    this.liveTranscriptListener = undefined;
   }
 
   private transcribe(audio: Float32Array): Promise<string> {
@@ -208,6 +255,7 @@ class BrowserWhisperSpeechProvider {
   }
 
   private releaseRecording(): void {
+    this.stopLivePreviews();
     for (const track of this.mediaStream?.getTracks() ?? []) track.stop();
     this.mediaRecorder = undefined;
     this.mediaStream = undefined;
