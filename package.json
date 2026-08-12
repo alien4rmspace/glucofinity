@@ -9,7 +9,7 @@
     "dev": "next dev",
     "build": "next build",
     "preview": "npx serve@latest out",
-    "test": "npm run build && node --test tests/static-export.test.mjs && node --experimental-strip-types --test tests/meal-transcript-extraction.test.ts",
+    "test": "npm run build && node --test tests/static-export.test.mjs && node --experimental-strip-types --test tests/meal-transcript-extraction.test.ts tests/local-nutrition-estimator.test.ts",
     "lint": "eslint . --ignore-pattern out --ignore-pattern .next"
   },
   "dependencies": {

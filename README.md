@@ -14,9 +14,11 @@ The current project is educational and informational. It is not a medical device
 - Static export for GitHub Pages
 - Deterministic local mock data
 
-No database, authentication, paid API, or hosted AI inference service is used. The
+No backend database, authentication, paid API, or hosted AI inference service is used. The
 optional voice workflow downloads a quantized LFM2.5 model from Hugging Face only
-after the user requests it, then runs inference locally in a WebGPU worker.
+after the user requests it, then runs inference locally in a WebGPU worker. A compact,
+bundled subset of USDA FoodData Central SR Legacy supports deterministic prototype
+nutrition estimates without a runtime nutrition API request.
 
 ## Run locally
 
@@ -80,7 +82,11 @@ The page demonstrates these concepts without claiming they are completed product
   and manual, AI-estimated, or user-corrected provenance
 - Optional on-device browser speech recognition with a typed-transcript fallback
 - User-triggered LFM2.5-1.2B-Instruct Q4 browser inference through Transformers.js
-  and WebGPU, constrained to transcript-grounded meal names and foods
+  and WebGPU, constrained to transcript-grounded meal names, foods, and stated portions
+- Deterministic local estimates for calories, carbohydrates, protein, fat, and fiber
+  using a compact USDA FoodData Central SR Legacy reference subset
+- Visible assumed portions, partial-match coverage, per-food estimates, source IDs, and
+  editable review before nutrition reaches the meal form
 - Editable review before a voice-generated draft reaches the session-only meal form
 - A post-meal glucose response view
 - A meal-centered response window with baseline, peak, rise, timing, 1-hour and 2-hour values, incremental area, return-near-baseline timing, and explicit data-quality states
@@ -94,11 +100,12 @@ The page demonstrates these concepts without claiming they are completed product
 - Planned time-series, XGBoost-style, vision-language, and local language-model responsibilities
 - Privacy-focused product principles
 
-The site does not currently connect to CGM hardware, Apple Health, nutrition databases,
-medication systems, paid AI services, or trained glucose-prediction models. It does not
-predict real glucose responses or persist personal health information. The optional
-LFM2.5 workflow performs local text extraction only; it does not estimate nutrition or
-provide medical reasoning.
+The site does not currently connect to CGM hardware, Apple Health, a live nutrition
+database, medication systems, paid AI services, or trained glucose-prediction models.
+It does not predict real glucose responses or persist personal health information. The
+optional LFM2.5 workflow performs local text extraction only; deterministic nutrition
+math is handled separately from bundled reference values, and neither component provides
+medical reasoning.
 
 ## Browser voice and local model
 
@@ -108,6 +115,13 @@ recognition. Unsupported browsers retain typed meal entry. LFM2.5 requires WebGP
 an initial model download of approximately 850 MB; supported browsers can reuse their
 cached model files. Transcripts remain in page memory for the open session and are not
 sent to a GlucoFinity server.
+
+After LFM2.5 extracts transcript-grounded food and portion phrases, the browser matches
+them against 27 common-food records bundled from USDA FoodData Central SR Legacy. Stated
+amounts are scaled using gram weights; missing amounts use clearly labeled reference
+portions. Unmatched foods remain unresolved and are excluded from totals. The subset is
+not a live or comprehensive USDA integration, so every estimate stays editable and is
+labeled as prototype nutrition.
 
 The model is `LiquidAI/LFM2.5-1.2B-Instruct-ONNX` in Q4 format and is distributed under
 the LFM 1.0 License. Transformers.js provides the browser inference runtime.

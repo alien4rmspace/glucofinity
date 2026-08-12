@@ -1,7 +1,9 @@
 export type NutritionEstimateSource =
   | "manual"
   | "ai-estimated"
-  | "ai-corrected";
+  | "ai-corrected"
+  | "reference-estimated"
+  | "reference-corrected";
 
 export type FoodEstimate = {
   name: string;
