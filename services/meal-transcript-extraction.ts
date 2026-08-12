@@ -12,6 +12,76 @@ const MAX_MEAL_NAME_LENGTH = 80;
 const MAX_FOOD_NAME_LENGTH = 80;
 const MAX_FOODS = 20;
 
+const MEAL_TYPE_WORDS = new Set([
+  "breakfast",
+  "brunch",
+  "lunch",
+  "dinner",
+  "supper",
+  "snack",
+  "meal",
+]);
+
+const PORTION_WORDS = new Set([
+  "a",
+  "an",
+  "one",
+  "two",
+  "three",
+  "four",
+  "five",
+  "six",
+  "seven",
+  "eight",
+  "nine",
+  "ten",
+  "eleven",
+  "twelve",
+  "thirteen",
+  "fourteen",
+  "fifteen",
+  "sixteen",
+  "seventeen",
+  "eighteen",
+  "nineteen",
+  "twenty",
+  "thirty",
+  "forty",
+  "fifty",
+  "sixty",
+  "seventy",
+  "eighty",
+  "ninety",
+  "hundred",
+  "half",
+  "quarter",
+  "percent",
+  "gram",
+  "grams",
+  "g",
+  "ounce",
+  "ounces",
+  "oz",
+  "cup",
+  "cups",
+  "tablespoon",
+  "tablespoons",
+  "tbsp",
+  "teaspoon",
+  "teaspoons",
+  "tsp",
+  "slice",
+  "slices",
+  "piece",
+  "pieces",
+  "item",
+  "items",
+  "container",
+  "containers",
+]);
+
+const CONNECTOR_WORDS = new Set(["and", "of"]);
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -29,6 +99,52 @@ function isGroundedInTranscript(value: string, transcript: string): boolean {
   const transcriptWords = new Set(normalizedWords(transcript));
   const candidateWords = normalizedWords(value).filter((word) => word.length > 2);
   return candidateWords.length > 0 && candidateWords.every((word) => transcriptWords.has(word));
+}
+
+function isNumericWord(value: string): boolean {
+  return /^\d+$/.test(value);
+}
+
+function isPortionOnlyDescription(value: string): boolean {
+  const words = normalizedWords(value);
+  return (
+    words.length > 0 &&
+    words.every(
+      (word) => PORTION_WORDS.has(word) || CONNECTOR_WORDS.has(word) || isNumericWord(word),
+    )
+  );
+}
+
+function foodNameWords(value: string): string[] {
+  const words = normalizedWords(value).filter(
+    (word) =>
+      !PORTION_WORDS.has(word) && !MEAL_TYPE_WORDS.has(word) && !isNumericWord(word),
+  );
+  while (words.length > 0 && CONNECTOR_WORDS.has(words[0])) words.shift();
+  while (words.length > 0 && CONNECTOR_WORDS.has(words[words.length - 1])) words.pop();
+  return words;
+}
+
+function foodName(value: string): string | undefined {
+  const words = foodNameWords(value);
+  if (words.length === 0) return undefined;
+  return words
+    .map((word) => word.charAt(0).toLocaleUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+export function deriveMealNameFromFoods(foods: readonly string[]): string | undefined {
+  const names = foods
+    .map(foodName)
+    .filter((name): name is string => Boolean(name))
+    .filter(
+      (name, index, values) =>
+        values.findIndex(
+          (candidate) => candidate.toLocaleLowerCase() === name.toLocaleLowerCase(),
+        ) === index,
+    );
+  if (names.length === 0) return undefined;
+  return names.join(", ").slice(0, MAX_MEAL_NAME_LENGTH);
 }
 
 function optionalGroundedString(
@@ -82,7 +198,7 @@ export function buildMealTranscriptMessages(transcript: string) {
     {
       role: "system" as const,
       content:
-        'Extract editable meal details from the transcript. Return only JSON with this exact shape: {"mealName":"optional concise name","foods":["food and portion explicitly stated"]}. Preserve stated quantities and units in each food string, such as "two eggs" or "1 cup brown rice". Use only words, quantities, units, and foods stated in the transcript. Omit uncertain details. Do not estimate nutrition, glucose effects, medication, diagnosis, treatment, or advice.',
+        'Extract editable meal details from the transcript. Return only JSON with this exact shape: {"mealName":"food-name summary only","foods":["food and portion explicitly stated"]}. The mealName must contain food names, never meal types such as breakfast, lunch, dinner, or snack. Every foods item must repeat its food name with its stated portion; never return a quantity or unit alone. Example: {"mealName":"White rice","foods":["nine grams of white rice"]}. Preserve stated quantities and units. Use only words, quantities, units, and foods stated in the transcript. Omit uncertain details. Do not estimate nutrition, glucose effects, medication, diagnosis, treatment, or advice.',
     },
     {
       role: "user" as const,
@@ -134,17 +250,34 @@ export function parseMealTranscriptExtraction(
     return validated;
   });
 
-  return {
-    mealName: optionalGroundedString(
-      parsed.mealName,
-      reviewedTranscript,
-      "mealName",
-      MAX_MEAL_NAME_LENGTH,
-    ),
-    foods: foods.filter(
+  const groundedModelMealName = optionalGroundedString(
+    parsed.mealName,
+    reviewedTranscript,
+    "mealName",
+    MAX_MEAL_NAME_LENGTH,
+  );
+  let reviewedFoods = foods.filter(
       (food, index) =>
         foods.findIndex((candidate) => candidate.toLocaleLowerCase() === food.toLocaleLowerCase()) ===
         index,
-    ),
+    );
+
+  if (
+    reviewedFoods.length === 1 &&
+    groundedModelMealName &&
+    isPortionOnlyDescription(reviewedFoods[0])
+  ) {
+    const groundedFoodName = foodName(groundedModelMealName);
+    if (groundedFoodName) {
+      const repairedFood = `${reviewedFoods[0]} ${groundedFoodName}`;
+      if (isGroundedInTranscript(repairedFood, reviewedTranscript)) {
+        reviewedFoods = [repairedFood];
+      }
+    }
+  }
+
+  return {
+    mealName: deriveMealNameFromFoods(reviewedFoods) ?? foodName(groundedModelMealName ?? ""),
+    foods: reviewedFoods,
   };
 }
