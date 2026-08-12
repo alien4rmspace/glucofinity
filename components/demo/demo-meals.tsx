@@ -4,6 +4,10 @@ import { Activity, Camera, Plus, Trash2, Utensils } from "lucide-react";
 import { type FormEvent, useState } from "react";
 import { MealResponseReview } from "@/components/demo/meal-response-review";
 import { DemoCard, DemoNotice, DemoSectionHeading } from "@/components/demo/demo-ui";
+import {
+  VoiceMealEntry,
+  type AppliedBrowserVoiceMealDraft,
+} from "@/components/demo/voice-meal-entry";
 import { mealVisionProvider } from "@/services/meal-vision-provider";
 import type { NutritionEstimateSource } from "@/types/ai";
 import type { DemoMeal, DemoMealDraft, DemoSettings } from "@/types/demo";
@@ -61,6 +65,26 @@ export function DemoMeals({
       analysisGeneratedAt: analysis.generatedAt,
     });
     setMessage("A structured fictional estimate was added. Editing a nutrition field records it as user-corrected.");
+    setFormOpen(true);
+  }
+
+  function applyVoiceDraft(voiceDraft: AppliedBrowserVoiceMealDraft) {
+    setDraft({
+      ...emptyDraft,
+      name: voiceDraft.mealName || voiceDraft.foods.join(", "),
+      foods: voiceDraft.foods.join(", "),
+      source: "voice-local-ai",
+      nutritionSource: "manual",
+      analysisProvider: voiceDraft.providerId,
+      analysisModel: voiceDraft.model,
+      analysisGeneratedAt: voiceDraft.generatedAt,
+      voiceTranscript: voiceDraft.transcript,
+    });
+    setMessage(
+      voiceDraft.edited
+        ? "Your reviewed local-model draft was applied. Nutrition remains blank for manual entry."
+        : "The local-model draft was applied for review. Nutrition remains blank for manual entry.",
+    );
     setFormOpen(true);
   }
 
@@ -125,6 +149,8 @@ export function DemoMeals({
         <p className="mt-2 min-h-5 text-xs text-[#64768a]" aria-live="polite">{message}</p>
       </div>
 
+      <VoiceMealEntry onApply={applyVoiceDraft} />
+
       {formOpen ? (
         <DemoCard className="p-5 sm:p-6">
           <form onSubmit={submitMeal} className="grid gap-5">
@@ -138,12 +164,16 @@ export function DemoMeals({
                     ? "This deterministic provider estimate still requires review."
                     : "At least one generated food or nutrition value was changed by the user."}
               </p>
-              {draft.analysisModel ? <p className="mt-2 text-[11px] text-[#718096]">Fixture provenance: {draft.analysisProvider} · {draft.analysisModel}</p> : null}
+              {draft.analysisModel ? (
+                <p className="mt-2 text-[11px] text-[#718096]">
+                  {draft.source === "voice-local-ai" ? "Local extraction" : "Fixture"} provenance: {draft.analysisProvider} · {draft.analysisModel}
+                </p>
+              ) : null}
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="grid gap-1.5 text-sm font-semibold text-[#34495e] sm:col-span-2">
                 Meal name
-                <input required value={draft.name} onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value, source: current.source === "simulated-estimate" ? current.source : "manual" }))} className="h-11 rounded-lg border border-[#cbd8e4] bg-white px-3 font-normal text-[#0b1f33]" placeholder="Example: Vegetable grain bowl" />
+                <input required value={draft.name} onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value, source: current.source === "manual" ? "manual" : current.source }))} className="h-11 rounded-lg border border-[#cbd8e4] bg-white px-3 font-normal text-[#0b1f33]" placeholder="Example: Vegetable grain bowl" />
               </label>
               <label className="grid gap-1.5 text-sm font-semibold text-[#34495e]">
                 Time
@@ -177,6 +207,12 @@ export function DemoMeals({
                 Notes
                 <textarea value={draft.note} onChange={(event) => setDraft((current) => ({ ...current, note: event.target.value }))} rows={3} className="rounded-lg border border-[#cbd8e4] bg-white px-3 py-2.5 font-normal text-[#0b1f33]" placeholder="Optional fictional context" />
               </label>
+              {draft.voiceTranscript ? (
+                <div className="rounded-lg bg-[#f7fafc] p-4 sm:col-span-2">
+                  <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#718096]">Reviewed voice transcript</p>
+                  <p className="mt-2 text-sm font-normal leading-6 text-[#34495e]">{draft.voiceTranscript}</p>
+                </div>
+              ) : null}
             </div>
             <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
               <button type="button" onClick={() => setFormOpen(false)} className="h-11 rounded-lg border border-[#cbd8e4] px-4 text-sm font-semibold text-[#34495e] hover:bg-[#f7fafc]">Cancel</button>
@@ -212,7 +248,7 @@ export function DemoMeals({
                   <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-[#f0edff] text-[#7257d9]"><Utensils className="size-5" aria-hidden="true" /></span>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                      <div><h3 className="font-semibold text-[#0b1f33]">{meal.name}</h3><p className="mt-1 text-xs text-[#718096]">{meal.time} · {meal.source === "simulated-estimate" ? "Simulated estimate" : meal.source === "manual" ? "Session entry" : "Fictional seed entry"} · {nutritionSourceLabel(meal.nutritionSource)}</p></div>
+                      <div><h3 className="font-semibold text-[#0b1f33]">{meal.name}</h3><p className="mt-1 text-xs text-[#718096]">{meal.time} · {mealSourceLabel(meal.source)} · {nutritionSourceLabel(meal.nutritionSource)}</p></div>
                       <div className="flex shrink-0 items-center gap-2">
                         <button
                           type="button"
@@ -249,6 +285,13 @@ export function DemoMeals({
 
 function correctedSource(source: NutritionEstimateSource): NutritionEstimateSource {
   return source === "ai-estimated" ? "ai-corrected" : source;
+}
+
+function mealSourceLabel(source: DemoMeal["source"]): string {
+  if (source === "simulated-estimate") return "Simulated estimate";
+  if (source === "voice-local-ai") return "Reviewed local voice entry";
+  if (source === "manual") return "Session entry";
+  return "Fictional seed entry";
 }
 
 function nutritionSourceLabel(source: NutritionEstimateSource): string {

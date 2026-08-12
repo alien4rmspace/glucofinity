@@ -14,7 +14,9 @@ The current project is educational and informational. It is not a medical device
 - Static export for GitHub Pages
 - Deterministic local mock data
 
-No database, authentication, paid API, or external AI service is used.
+No database, authentication, paid API, or hosted AI inference service is used. The
+optional voice workflow downloads a quantized LFM2.5 model from Hugging Face only
+after the user requests it, then runs inference locally in a WebGPU worker.
 
 ## Run locally
 
@@ -76,6 +78,10 @@ The page demonstrates these concepts without claiming they are completed product
 - Meal-photo recognition estimates and editable carbohydrate values
 - Provider-neutral structured meal estimates with editable foods, calories, macros,
   and manual, AI-estimated, or user-corrected provenance
+- Optional on-device browser speech recognition with a typed-transcript fallback
+- User-triggered LFM2.5-1.2B-Instruct Q4 browser inference through Transformers.js
+  and WebGPU, constrained to transcript-grounded meal names and foods
+- Editable review before a voice-generated draft reaches the session-only meal form
 - A post-meal glucose response view
 - A meal-centered response window with baseline, peak, rise, timing, 1-hour and 2-hour values, incremental area, return-near-baseline timing, and explicit data-quality states
 - Stable mock-source provenance and visible gaps when surrounding readings are incomplete
@@ -89,8 +95,22 @@ The page demonstrates these concepts without claiming they are completed product
 - Privacy-focused product principles
 
 The site does not currently connect to CGM hardware, Apple Health, nutrition databases,
-medication systems, paid AI services, trained prediction models, or external language
-models. It does not predict real glucose responses or store personal health information.
+medication systems, paid AI services, or trained glucose-prediction models. It does not
+predict real glucose responses or persist personal health information. The optional
+LFM2.5 workflow performs local text extraction only; it does not estimate nutrition or
+provide medical reasoning.
+
+## Browser voice and local model
+
+The interactive Meals demo can use a browser's local-only Web Speech API when the
+browser exposes that guarantee. It never silently falls back to remote speech
+recognition. Unsupported browsers retain typed meal entry. LFM2.5 requires WebGPU and
+an initial model download of approximately 850 MB; supported browsers can reuse their
+cached model files. Transcripts remain in page memory for the open session and are not
+sent to a GlucoFinity server.
+
+The model is `LiquidAI/LFM2.5-1.2B-Instruct-ONNX` in Q4 format and is distributed under
+the LFM 1.0 License. Transformers.js provides the browser inference runtime.
 The model registry, chronological evaluation, and XGBoost training concepts shown in the
 demo are architecture/readiness states rather than performance claims.
 
