@@ -3,6 +3,7 @@
 import { Activity, Camera, Plus, Trash2, Utensils } from "lucide-react";
 import { type FormEvent, useState } from "react";
 import { MealResponseReview } from "@/components/demo/meal-response-review";
+import { MealTimeSelect } from "@/components/demo/meal-time-select";
 import { DemoCard, DemoNotice, DemoSectionHeading } from "@/components/demo/demo-ui";
 import {
   VoiceMealEntry,
@@ -70,30 +71,8 @@ export function DemoMeals({
 
   function applyVoiceDraft(voiceDraft: AppliedBrowserVoiceMealDraft) {
     const nutrition = voiceDraft.nutritionEstimate;
-    const hasNutritionEstimate = nutrition.matchedFoodCount > 0;
-    setDraft({
-      ...emptyDraft,
-      name: voiceDraft.mealName || voiceDraft.foods.join(", "),
-      foods: voiceDraft.foods.join(", "),
-      calories: hasNutritionEstimate ? nutrition.totals.calories : undefined,
-      carbohydrates: hasNutritionEstimate
-        ? nutrition.totals.carbohydratesGrams
-        : undefined,
-      protein: hasNutritionEstimate ? nutrition.totals.proteinGrams : undefined,
-      fat: hasNutritionEstimate ? nutrition.totals.fatGrams : undefined,
-      fiber: hasNutritionEstimate ? nutrition.totals.fiberGrams : undefined,
-      source: "voice-local-ai",
-      nutritionSource: hasNutritionEstimate ? "reference-estimated" : "manual",
-      analysisProvider: voiceDraft.providerId,
-      analysisModel: voiceDraft.model,
-      analysisGeneratedAt: voiceDraft.generatedAt,
-      nutritionProvider: hasNutritionEstimate ? nutrition.sourceId : undefined,
-      nutritionModel: hasNutritionEstimate ? "deterministic-portion-scaler-v1" : undefined,
-      nutritionMatchedFoods: nutrition.matchedFoodCount,
-      nutritionTotalFoods: nutrition.totalFoodCount,
-      voiceTranscript: voiceDraft.transcript,
-    });
-    if (!hasNutritionEstimate) {
+    setDraft(mealDraftFromVoice(voiceDraft));
+    if (!nutrition.matchedFoodCount && !voiceDraft.nutritionEdited) {
       setMessage("The local-model draft was applied. No foods matched the local nutrition reference, so nutrition remains blank for manual entry.");
     } else if (nutrition.matchedFoodCount < nutrition.totalFoodCount) {
       setMessage(`The reviewed draft and partial nutrition estimate were applied. ${nutrition.matchedFoodCount} of ${nutrition.totalFoodCount} foods are included in the totals.`);
@@ -105,6 +84,17 @@ export function DemoMeals({
       );
     }
     setFormOpen(true);
+  }
+
+  function addVoiceDraft(voiceDraft: AppliedBrowserVoiceMealDraft) {
+    const reviewedDraft = mealDraftFromVoice(voiceDraft);
+    onAddMeal({
+      ...reviewedDraft,
+      name: reviewedDraft.name.trim(),
+      note: reviewedDraft.note.trim(),
+    });
+    setMessage("The reviewed local-model draft was added directly to this browser session.");
+    setFormOpen(false);
   }
 
   function submitMeal(event: FormEvent<HTMLFormElement>) {
@@ -168,7 +158,7 @@ export function DemoMeals({
         <p className="mt-2 min-h-5 text-xs text-[#64768a]" aria-live="polite">{message}</p>
       </div>
 
-      <VoiceMealEntry onApply={applyVoiceDraft} />
+      <VoiceMealEntry onApply={applyVoiceDraft} onAdd={addVoiceDraft} />
 
       {formOpen ? (
         <DemoCard className="p-5 sm:p-6">
@@ -202,8 +192,11 @@ export function DemoMeals({
                 <input required value={draft.name} onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value, source: current.source === "manual" ? "manual" : current.source }))} className="h-11 rounded-lg border border-[#cbd8e4] bg-white px-3 font-normal text-[#0b1f33]" placeholder="Example: Vegetable grain bowl" />
               </label>
               <label className="grid gap-1.5 text-sm font-semibold text-[#34495e]">
-                Time
-                <input value={draft.time} onChange={(event) => setDraft((current) => ({ ...current, time: event.target.value }))} className="h-11 rounded-lg border border-[#cbd8e4] bg-white px-3 font-normal text-[#0b1f33]" />
+                Meal time (local)
+                <MealTimeSelect
+                  value={draft.time}
+                  onChange={(time) => setDraft((current) => ({ ...current, time }))}
+                />
               </label>
               <label className="grid gap-1.5 text-sm font-semibold text-[#34495e] sm:col-span-2">
                 Foods (comma separated)
@@ -307,6 +300,39 @@ export function DemoMeals({
       </section>
     </div>
   );
+}
+
+function mealDraftFromVoice(voiceDraft: AppliedBrowserVoiceMealDraft): DemoMealDraft {
+  const nutrition = voiceDraft.nutritionEstimate;
+  const hasReferenceEstimate = nutrition.matchedFoodCount > 0;
+  const hasNutrition = hasReferenceEstimate || voiceDraft.nutritionEdited;
+  return {
+    ...emptyDraft,
+    name: voiceDraft.mealName || voiceDraft.foods.join(", "),
+    time: voiceDraft.time,
+    foods: voiceDraft.foods.join(", "),
+    calories: hasNutrition ? nutrition.totals.calories : undefined,
+    carbohydrates: hasNutrition ? nutrition.totals.carbohydratesGrams : undefined,
+    protein: hasNutrition ? nutrition.totals.proteinGrams : undefined,
+    fat: hasNutrition ? nutrition.totals.fatGrams : undefined,
+    fiber: hasNutrition ? nutrition.totals.fiberGrams : undefined,
+    source: "voice-local-ai",
+    nutritionSource: voiceDraft.nutritionEdited
+      ? hasReferenceEstimate
+        ? "reference-corrected"
+        : "manual"
+      : hasReferenceEstimate
+        ? "reference-estimated"
+        : "manual",
+    analysisProvider: voiceDraft.providerId,
+    analysisModel: voiceDraft.model,
+    analysisGeneratedAt: voiceDraft.generatedAt,
+    nutritionProvider: hasReferenceEstimate ? nutrition.sourceId : undefined,
+    nutritionModel: hasReferenceEstimate ? "deterministic-portion-scaler-v1" : undefined,
+    nutritionMatchedFoods: nutrition.matchedFoodCount,
+    nutritionTotalFoods: nutrition.totalFoodCount,
+    voiceTranscript: voiceDraft.transcript,
+  };
 }
 
 function correctedSource(source: NutritionEstimateSource): NutritionEstimateSource {

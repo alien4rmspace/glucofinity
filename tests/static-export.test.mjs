@@ -35,7 +35,7 @@ test("exports the complete GlucoFinity prototype", async () => {
 });
 
 test("keeps the AI foundation evidence-first and reviewable", async () => {
-  const [demoMeals, demoInsights, mealAnalysis, aiPanel, aiService, visionProvider, voiceEntry, localModel, nutritionEstimator, nutritionReference] = await Promise.all([
+  const [demoMeals, demoInsights, mealAnalysis, aiPanel, aiService, visionProvider, voiceEntry, mealTimeSelect, localModel, nutritionEstimator, nutritionReference] = await Promise.all([
     readFile(new URL("../components/demo/demo-meals.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/demo/demo-insights.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/sections/meal-analysis.tsx", import.meta.url), "utf8"),
@@ -43,6 +43,7 @@ test("keeps the AI foundation evidence-first and reviewable", async () => {
     readFile(new URL("../services/ai-foundation.ts", import.meta.url), "utf8"),
     readFile(new URL("../services/meal-vision-provider.ts", import.meta.url), "utf8"),
     readFile(new URL("../components/demo/voice-meal-entry.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/demo/meal-time-select.tsx", import.meta.url), "utf8"),
     readFile(new URL("../services/browser-meal-language-provider.ts", import.meta.url), "utf8"),
     readFile(new URL("../services/local-nutrition-estimator.ts", import.meta.url), "utf8"),
     readFile(new URL("../data/local-nutrition-reference.ts", import.meta.url), "utf8"),
@@ -65,6 +66,15 @@ test("keeps the AI foundation evidence-first and reviewable", async () => {
   assert.match(voiceEntry, /Local processing only/);
   assert.match(voiceEntry, /Nothing is saved yet/);
   assert.match(voiceEntry, /Estimated nutrition/);
+  assert.match(voiceEntry, /Edit nutrition/);
+  assert.match(voiceEntry, /Continue in full form/);
+  assert.match(voiceEntry, /Add to session/);
+  assert.equal(voiceEntry.match(/step="any"/g)?.length, 1);
+  assert.equal(voiceEntry.match(/inputMode="decimal"/g)?.length, 1);
+  assert.match(demoMeals, /MealTimeSelect/);
+  assert.match(mealTimeSelect, /<select/);
+  assert.match(mealTimeSelect, /MINUTES_PER_OPTION = 15/);
+  assert.match(mealTimeSelect, /nearestLocalMealTime/);
   assert.match(voiceEntry, /USDA FoodData Central SR Legacy/);
   assert.match(localModel, /parseMealTranscriptExtraction/);
   assert.match(localModel, /new Worker/);
