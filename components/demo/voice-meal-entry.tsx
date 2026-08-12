@@ -145,7 +145,13 @@ export function VoiceMealEntry({
     transcriptRef.current = "";
 
     try {
-      await browserWhisperSpeechProvider.startRecording();
+      await browserWhisperSpeechProvider.startRecording((liveTranscript) => {
+        transcriptRef.current = liveTranscript;
+        setTranscript(liveTranscript);
+        setActionMessage(
+          "Recording locally. The provisional transcript is updating; press Stop when finished.",
+        );
+      });
       setRecording(true);
       setActionMessage(
         "Recording locally. Speak naturally, then press Stop recording when finished.",
@@ -439,9 +445,10 @@ export function VoiceMealEntry({
                 : "Prepare the local models before recording. Typed meal entry remains available once LFM2.5 is ready."}
             </p>
             <p className="mt-1 text-xs leading-5 text-[#64768a]">
-              Press once to start recording. Pauses will not submit the meal; press the same
-              button again when you are finished. You can name several foods and portions in
-              one recording. The transcript appears after Distil-Whisper processes the clip.
+              Press once to start recording. A provisional transcript refreshes every few
+              seconds while you speak. Pauses will not submit the meal; press the same button
+              again when you are finished. The complete clip receives a final transcription
+              before the meal draft is prepared.
             </p>
           </div>
           <button
@@ -461,7 +468,9 @@ export function VoiceMealEntry({
             {recording ? "Stop recording and process" : "Start recording"}
           </button>
           <label className="grid gap-1.5 text-sm font-semibold text-[#34495e]">
-            Distil-Whisper transcript or typed description
+            {recording
+              ? "Live provisional Distil-Whisper transcript"
+              : "Distil-Whisper transcript or typed description"}
             <textarea
               value={transcript}
               onChange={(event) => {
@@ -471,8 +480,13 @@ export function VoiceMealEntry({
               disabled={recording || processing}
               rows={3}
               maxLength={4_000}
+              aria-live="polite"
               className="rounded-lg border border-[#cbd8e4] bg-white px-3 py-2.5 font-normal text-[#0b1f33] disabled:bg-[#f3f6f8]"
-              placeholder="Example: For lunch I had brown rice, salmon, and roasted broccoli."
+              placeholder={
+                recording
+                  ? "Listening… The provisional transcript will appear here."
+                  : "Example: For lunch I had brown rice, salmon, and roasted broccoli."
+              }
             />
           </label>
           <button

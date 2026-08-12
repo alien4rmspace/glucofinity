@@ -82,8 +82,13 @@ test("keeps the AI foundation evidence-first and reviewable", async () => {
   assert.match(voiceEntry, /Add to session/);
   assert.match(voiceEntry, /Press once to start recording/);
   assert.match(voiceEntry, /stopRecordingAndTranscribe/);
+  assert.match(voiceEntry, /Live provisional Distil-Whisper transcript/);
+  assert.match(voiceEntry, /provisional transcript refreshes every few/);
   assert.match(voiceEntry, /Distil-Whisper transcript or typed description/);
   assert.match(whisperProvider, /new MediaRecorder/);
+  assert.match(whisperProvider, /LIVE_PREVIEW_INTERVAL_MS = 4_000/);
+  assert.match(whisperProvider, /startLivePreview/);
+  assert.match(whisperProvider, /liveTranscriptListener/);
   assert.match(whisperProvider, /OfflineAudioContext/);
   assert.match(whisperProvider, /TARGET_SAMPLE_RATE = 16_000/);
   assert.match(whisperProvider, /audio\.buffer/);
