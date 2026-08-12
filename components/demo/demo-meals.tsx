@@ -69,22 +69,41 @@ export function DemoMeals({
   }
 
   function applyVoiceDraft(voiceDraft: AppliedBrowserVoiceMealDraft) {
+    const nutrition = voiceDraft.nutritionEstimate;
+    const hasNutritionEstimate = nutrition.matchedFoodCount > 0;
     setDraft({
       ...emptyDraft,
       name: voiceDraft.mealName || voiceDraft.foods.join(", "),
       foods: voiceDraft.foods.join(", "),
+      calories: hasNutritionEstimate ? nutrition.totals.calories : undefined,
+      carbohydrates: hasNutritionEstimate
+        ? nutrition.totals.carbohydratesGrams
+        : undefined,
+      protein: hasNutritionEstimate ? nutrition.totals.proteinGrams : undefined,
+      fat: hasNutritionEstimate ? nutrition.totals.fatGrams : undefined,
+      fiber: hasNutritionEstimate ? nutrition.totals.fiberGrams : undefined,
       source: "voice-local-ai",
-      nutritionSource: "manual",
+      nutritionSource: hasNutritionEstimate ? "reference-estimated" : "manual",
       analysisProvider: voiceDraft.providerId,
       analysisModel: voiceDraft.model,
       analysisGeneratedAt: voiceDraft.generatedAt,
+      nutritionProvider: hasNutritionEstimate ? nutrition.sourceId : undefined,
+      nutritionModel: hasNutritionEstimate ? "deterministic-portion-scaler-v1" : undefined,
+      nutritionMatchedFoods: nutrition.matchedFoodCount,
+      nutritionTotalFoods: nutrition.totalFoodCount,
       voiceTranscript: voiceDraft.transcript,
     });
-    setMessage(
-      voiceDraft.edited
-        ? "Your reviewed local-model draft was applied. Nutrition remains blank for manual entry."
-        : "The local-model draft was applied for review. Nutrition remains blank for manual entry.",
-    );
+    if (!hasNutritionEstimate) {
+      setMessage("The local-model draft was applied. No foods matched the local nutrition reference, so nutrition remains blank for manual entry.");
+    } else if (nutrition.matchedFoodCount < nutrition.totalFoodCount) {
+      setMessage(`The reviewed draft and partial nutrition estimate were applied. ${nutrition.matchedFoodCount} of ${nutrition.totalFoodCount} foods are included in the totals.`);
+    } else {
+      setMessage(
+        voiceDraft.edited
+          ? "Your reviewed draft and local nutrition estimate were applied. Review every value before adding the meal."
+          : "The local draft and nutrition estimate were applied for review.",
+      );
+    }
     setFormOpen(true);
   }
 
@@ -139,7 +158,7 @@ export function DemoMeals({
       </div>
 
       <DemoNotice icon={<Camera className="size-5" />} title="Simulated meal analysis" tone="purple">
-        No image-recognition or nutrition service is connected. The simulation fills the form with fixed fictional values and does not inspect or upload a photo.
+        No image-recognition or external nutrition service is connected. The simulation fills the form with fixed fictional values and does not inspect or upload a photo. Voice entries use a separate, compact local nutrition reference.
       </DemoNotice>
 
       <div>
@@ -162,11 +181,18 @@ export function DemoMeals({
                   ? "Nutrition was entered manually in this browser session."
                   : draft.nutritionSource === "ai-estimated"
                     ? "This deterministic provider estimate still requires review."
-                    : "At least one generated food or nutrition value was changed by the user."}
+                    : draft.nutritionSource === "reference-estimated"
+                      ? `A compact local reference matched ${draft.nutritionMatchedFoods ?? 0} of ${draft.nutritionTotalFoods ?? 0} foods. Unmatched foods are excluded from the totals.`
+                      : "At least one generated food or nutrition value was changed by the user."}
               </p>
               {draft.analysisModel ? (
                 <p className="mt-2 text-[11px] text-[#718096]">
                   {draft.source === "voice-local-ai" ? "Local extraction" : "Fixture"} provenance: {draft.analysisProvider} · {draft.analysisModel}
+                </p>
+              ) : null}
+              {draft.nutritionProvider ? (
+                <p className="mt-1 text-[11px] text-[#718096]">
+                  Nutrition provenance: {draft.nutritionProvider} · {draft.nutritionModel}
                 </p>
               ) : null}
             </div>
@@ -284,7 +310,9 @@ export function DemoMeals({
 }
 
 function correctedSource(source: NutritionEstimateSource): NutritionEstimateSource {
-  return source === "ai-estimated" ? "ai-corrected" : source;
+  if (source === "ai-estimated") return "ai-corrected";
+  if (source === "reference-estimated") return "reference-corrected";
+  return source;
 }
 
 function mealSourceLabel(source: DemoMeal["source"]): string {
@@ -297,6 +325,8 @@ function mealSourceLabel(source: DemoMeal["source"]): string {
 function nutritionSourceLabel(source: NutritionEstimateSource): string {
   if (source === "ai-estimated") return "AI-estimated nutrition";
   if (source === "ai-corrected") return "User-corrected AI estimate";
+  if (source === "reference-estimated") return "Local reference estimate";
+  if (source === "reference-corrected") return "User-corrected local estimate";
   return "Manual nutrition";
 }
 

@@ -19,6 +19,10 @@ export type DemoMeal = {
   analysisProvider?: string;
   analysisModel?: string;
   analysisGeneratedAt?: string;
+  nutritionProvider?: string;
+  nutritionModel?: string;
+  nutritionMatchedFoods?: number;
+  nutritionTotalFoods?: number;
   voiceTranscript?: string;
 };
 

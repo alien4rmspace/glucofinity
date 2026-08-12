@@ -82,7 +82,7 @@ export function buildMealTranscriptMessages(transcript: string) {
     {
       role: "system" as const,
       content:
-        'Extract editable meal details from the transcript. Return only JSON with this exact shape: {"mealName":"optional concise name","foods":["food explicitly stated"]}. Use only words and foods stated in the transcript. Omit uncertain details. Do not estimate nutrition, glucose effects, medication, diagnosis, treatment, or advice.',
+        'Extract editable meal details from the transcript. Return only JSON with this exact shape: {"mealName":"optional concise name","foods":["food and portion explicitly stated"]}. Preserve stated quantities and units in each food string, such as "two eggs" or "1 cup brown rice". Use only words, quantities, units, and foods stated in the transcript. Omit uncertain details. Do not estimate nutrition, glucose effects, medication, diagnosis, treatment, or advice.',
     },
     {
       role: "user" as const,

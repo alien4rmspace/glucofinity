@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Calculator,
   Cpu,
   Download,
   Mic,
@@ -21,6 +22,11 @@ import {
   speechErrorMessage,
   type BrowserSpeechRecognition,
 } from "@/services/browser-speech-service";
+import {
+  estimateLocalNutrition,
+  splitFoodDescriptions,
+} from "@/services/local-nutrition-estimator";
+import type { LocalNutritionEstimate } from "@/types/nutrition";
 import type {
   BrowserSpeechSupport,
   LocalMealModelState,
@@ -33,6 +39,7 @@ type VoiceDraft = {
   foodsText: string;
   generatedAt: string;
   edited: boolean;
+  nutritionEstimate: LocalNutritionEstimate;
 };
 
 export type AppliedBrowserVoiceMealDraft = {
@@ -43,6 +50,7 @@ export type AppliedBrowserVoiceMealDraft = {
   model: string;
   generatedAt: string;
   edited: boolean;
+  nutritionEstimate: LocalNutritionEstimate;
 };
 
 export function VoiceMealEntry({
@@ -165,12 +173,14 @@ export function VoiceMealEntry({
     setActionMessage("LFM2.5 is preparing an editable draft on this device.");
     try {
       const extraction = await browserMealLanguageProvider.extractMeal(reviewedTranscript);
+      const nutritionEstimate = estimateLocalNutrition(extraction.foods);
       setVoiceDraft({
         transcript: reviewedTranscript,
         mealName: extraction.mealName ?? "",
         foodsText: extraction.foods.join(", "),
         generatedAt: new Date().toISOString(),
         edited: false,
+        nutritionEstimate,
       });
       setActionMessage("Review the local model's draft before applying it to the meal form.");
     } catch (error) {
@@ -180,6 +190,7 @@ export function VoiceMealEntry({
         foodsText: "",
         generatedAt: new Date().toISOString(),
         edited: false,
+        nutritionEstimate: estimateLocalNutrition([]),
       });
       setActionMessage(
         `The transcript is ready, but the local model did not produce grounded meal fields. Enter them manually. ${
@@ -193,7 +204,17 @@ export function VoiceMealEntry({
 
   function updateVoiceDraft(field: "mealName" | "foodsText", value: string) {
     setVoiceDraft((current) =>
-      current ? { ...current, [field]: value, edited: true } : current,
+      current
+        ? {
+            ...current,
+            [field]: value,
+            edited: true,
+            nutritionEstimate:
+              field === "foodsText"
+                ? estimateLocalNutrition(splitFoodDescriptions(value))
+                : current.nutritionEstimate,
+          }
+        : current,
     );
   }
 
@@ -202,14 +223,12 @@ export function VoiceMealEntry({
     onApply({
       transcript: voiceDraft.transcript,
       mealName: voiceDraft.mealName.trim(),
-      foods: voiceDraft.foodsText
-        .split(",")
-        .map((food) => food.trim())
-        .filter(Boolean),
+      foods: splitFoodDescriptions(voiceDraft.foodsText),
       providerId: WEB_LFM_PROVIDER_ID,
       model: WEB_LFM_MODEL_ID,
       generatedAt: voiceDraft.generatedAt,
       edited: voiceDraft.edited,
+      nutritionEstimate: voiceDraft.nutritionEstimate,
     });
     setVoiceDraft(undefined);
     setTranscript("");
@@ -230,8 +249,9 @@ export function VoiceMealEntry({
             Voice meal entry
           </h2>
           <p className="mt-1 max-w-3xl text-sm leading-6 text-[#64768a]">
-            Use local browser speech or type a description. LFM2.5 extracts only the meal
-            name and foods you stated, then waits for your review.
+            Use local browser speech or type a description. LFM2.5 extracts the meal name,
+            foods, and stated portions; a compact local reference then prepares reviewable
+            nutrition estimates.
           </p>
         </div>
       </div>
@@ -387,14 +407,85 @@ export function VoiceMealEntry({
               />
             </label>
             <label className="grid gap-1.5 text-sm font-semibold text-[#34495e]">
-              Foods (comma separated)
-              <input
+              Foods and portions (one per line or comma separated)
+              <textarea
                 value={voiceDraft.foodsText}
                 onChange={(event) => updateVoiceDraft("foodsText", event.target.value)}
-                className="h-11 rounded-lg border border-[#cbd8e4] bg-white px-3 font-normal text-[#0b1f33]"
-                placeholder="Review the foods you stated"
+                rows={3}
+                className="rounded-lg border border-[#cbd8e4] bg-white px-3 py-2.5 font-normal text-[#0b1f33]"
+                placeholder="Example: 1 cup brown rice, 4 oz salmon"
               />
             </label>
+          </div>
+          <div className="grid gap-4 rounded-lg border border-[#cfe0f2] bg-[#f7fbff] p-4">
+            <div className="flex items-start gap-3">
+              <Calculator className="mt-0.5 size-5 shrink-0 text-[#1268e8]" aria-hidden="true" />
+              <div>
+                <p className="text-sm font-semibold text-[#0b1f33]">Estimated nutrition</p>
+                <p className="mt-1 text-xs leading-5 text-[#64768a]">
+                  {voiceDraft.nutritionEstimate.matchedFoodCount} of{" "}
+                  {voiceDraft.nutritionEstimate.totalFoodCount} foods matched the local
+                  reference. Unmatched foods are excluded from the totals.
+                </p>
+              </div>
+            </div>
+
+            {voiceDraft.nutritionEstimate.matchedFoodCount > 0 ? (
+              <dl className="grid grid-cols-2 gap-2 text-center sm:grid-cols-5">
+                <NutritionMetric label="Calories" value={voiceDraft.nutritionEstimate.totals.calories} />
+                <NutritionMetric label="Carbs" value={voiceDraft.nutritionEstimate.totals.carbohydratesGrams} unit="g" />
+                <NutritionMetric label="Protein" value={voiceDraft.nutritionEstimate.totals.proteinGrams} unit="g" />
+                <NutritionMetric label="Fat" value={voiceDraft.nutritionEstimate.totals.fatGrams} unit="g" />
+                <NutritionMetric label="Fiber" value={voiceDraft.nutritionEstimate.totals.fiberGrams} unit="g" />
+              </dl>
+            ) : null}
+
+            <ul className="grid gap-2" aria-label="Per-food nutrition matches">
+              {voiceDraft.nutritionEstimate.foods.map((food, index) => (
+                <li
+                  key={`${food.input}-${index}`}
+                  className="rounded-lg border border-[#dce5ee] bg-white p-3"
+                >
+                  <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-[#0b1f33]">{food.input}</p>
+                      <p className="mt-1 text-xs leading-5 text-[#64768a]">
+                        {food.matchedName
+                          ? `${food.matchedName} · ${food.portionLabel}`
+                          : food.unresolvedReason}
+                      </p>
+                    </div>
+                    {food.nutrients ? (
+                      <p className="shrink-0 text-xs font-semibold text-[#34495e]">
+                        {food.nutrients.carbohydratesGrams}g carbs · {food.nutrients.proteinGrams}g protein ·{" "}
+                        {food.nutrients.fatGrams}g fat · {food.nutrients.fiberGrams}g fiber
+                      </p>
+                    ) : null}
+                  </div>
+                </li>
+              ))}
+            </ul>
+
+            {voiceDraft.nutritionEstimate.defaultPortionCount > 0 ? (
+              <p className="rounded-lg bg-[#fff7e6] px-3 py-2 text-xs leading-5 text-[#7a5411]">
+                {voiceDraft.nutritionEstimate.defaultPortionCount} matched{" "}
+                {voiceDraft.nutritionEstimate.defaultPortionCount === 1 ? "food uses" : "foods use"} an
+                assumed reference portion. Add a quantity and unit above for a more specific estimate.
+              </p>
+            ) : null}
+
+            <p className="text-[11px] leading-5 text-[#718096]">
+              Local prototype subset adapted from{" "}
+              <a
+                href={voiceDraft.nutritionEstimate.sourceUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="font-semibold text-[#0e5ab7] underline underline-offset-2"
+              >
+                USDA FoodData Central SR Legacy
+              </a>
+              . This is not a live USDA integration. Values are estimates and require review.
+            </p>
           </div>
           <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
             <button
@@ -413,11 +504,32 @@ export function VoiceMealEntry({
             </button>
           </div>
           <p className="text-[11px] leading-5 text-[#718096]">
-            Provenance: local {WEB_LFM_MODEL_ID}. The model does not estimate nutrition or
-            glucose effects in this workflow.
+            Provenance: local {WEB_LFM_MODEL_ID} extracts transcript-grounded foods; local{" "}
+            {voiceDraft.nutritionEstimate.sourceId} calculates nutrition. Neither predicts
+            glucose effects or provides medical guidance.
           </p>
         </DemoCard>
       ) : null}
     </section>
+  );
+}
+
+function NutritionMetric({
+  label,
+  value,
+  unit = "",
+}: {
+  label: string;
+  value: number;
+  unit?: string;
+}) {
+  return (
+    <div className="rounded-lg bg-white p-2">
+      <dt className="text-[11px] text-[#718096]">{label}</dt>
+      <dd className="mt-1 text-sm font-semibold text-[#0b1f33]">
+        {value}
+        {unit ? ` ${unit}` : ""}
+      </dd>
+    </div>
   );
 }

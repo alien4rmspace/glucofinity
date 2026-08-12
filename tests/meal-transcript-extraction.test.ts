@@ -12,7 +12,18 @@ test("constrains local LFM extraction to non-medical meal fields", () => {
   const messages = buildMealTranscriptMessages(transcript);
   assert.equal(messages.length, 2);
   assert.match(messages[0].content, /Do not estimate nutrition/);
+  assert.match(messages[0].content, /Preserve stated quantities and units/);
   assert.match(messages[0].content, /medication, diagnosis, treatment, or advice/);
+});
+
+test("accepts transcript-grounded quantities for deterministic nutrition scaling", () => {
+  const portionTranscript = "For breakfast I had two eggs and one slice of wheat toast.";
+  const result = parseMealTranscriptExtraction(
+    '{"mealName":"breakfast","foods":["two eggs","one slice wheat toast"]}',
+    portionTranscript,
+  );
+
+  assert.deepEqual(result.foods, ["two eggs", "one slice wheat toast"]);
 });
 
 test("accepts transcript-grounded meal details", () => {
