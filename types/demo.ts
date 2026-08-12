@@ -14,11 +14,12 @@ export type DemoMeal = {
   calories?: number;
   foods: string;
   note: string;
-  source: "seed" | "manual" | "simulated-estimate";
+  source: "seed" | "manual" | "simulated-estimate" | "voice-local-ai";
   nutritionSource: NutritionEstimateSource;
   analysisProvider?: string;
   analysisModel?: string;
   analysisGeneratedAt?: string;
+  voiceTranscript?: string;
 };
 
 export type DemoSettings = {

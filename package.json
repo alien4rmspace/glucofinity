@@ -9,10 +9,11 @@
     "dev": "next dev",
     "build": "next build",
     "preview": "npx serve@latest out",
-    "test": "npm run build && node --test tests/static-export.test.mjs",
+    "test": "npm run build && node --test tests/static-export.test.mjs && node --experimental-strip-types --test tests/meal-transcript-extraction.test.ts",
     "lint": "eslint . --ignore-pattern out --ignore-pattern .next"
   },
   "dependencies": {
+    "@huggingface/transformers": "4.2.0",
     "lucide-react": "^1.28.0",
     "next": "^16.2.12",
     "react": "19.2.6",

@@ -35,12 +35,14 @@ test("exports the complete GlucoFinity prototype", async () => {
 });
 
 test("keeps the AI foundation evidence-first and reviewable", async () => {
-  const [demoMeals, demoInsights, aiPanel, aiService, visionProvider] = await Promise.all([
+  const [demoMeals, demoInsights, aiPanel, aiService, visionProvider, voiceEntry, localModel] = await Promise.all([
     readFile(new URL("../components/demo/demo-meals.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/demo/demo-insights.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/demo/ai-foundation-panel.tsx", import.meta.url), "utf8"),
     readFile(new URL("../services/ai-foundation.ts", import.meta.url), "utf8"),
     readFile(new URL("../services/meal-vision-provider.ts", import.meta.url), "utf8"),
+    readFile(new URL("../components/demo/voice-meal-entry.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../services/browser-meal-language-provider.ts", import.meta.url), "utf8"),
   ]);
 
   assert.match(demoMeals, /ai-estimated/);
@@ -53,6 +55,11 @@ test("keeps the AI foundation evidence-first and reviewable", async () => {
   assert.match(aiService, /meal-prediction-features-v1/);
   assert.match(aiService, /response\.dataQuality === "good"/);
   assert.match(visionProvider, /interface MealVisionProvider/);
+  assert.match(voiceEntry, /Local processing only/);
+  assert.match(voiceEntry, /Nothing is saved yet/);
+  assert.match(voiceEntry, /does not estimate nutrition or/);
+  assert.match(localModel, /parseMealTranscriptExtraction/);
+  assert.match(localModel, /new Worker/);
   assert.doesNotMatch(aiPanel, /insulin dose|medication dose|treatment recommendation/i);
 });
 
