@@ -22,7 +22,7 @@ test("exports the complete GlucoFinity prototype", async () => {
   assert.match(html, /id="how-it-works"/);
   assert.match(html, /id="insights"/);
   assert.match(html, /id="safety"/);
-  assert.match(html, /https:\/\/alien4rmspace\.github\.io\/glucofinity/);
+  assert.match(html, /https:\/\/damiansaelee\.com\/glucofinity/);
   assert.match(html, /\/glucofinity\/_next\/static\//);
   assert.match(html, /\/glucofinity\/favicon\.svg/);
   assert.match(html, /glucofinity-lockup-transparent\.[a-z0-9_]+\.png/);
@@ -32,6 +32,28 @@ test("exports the complete GlucoFinity prototype", async () => {
     html,
     /codex-preview|Your site is taking shape|react-loading-skeleton/i,
   );
+});
+
+test("keeps the AI foundation evidence-first and reviewable", async () => {
+  const [demoMeals, demoInsights, aiPanel, aiService, visionProvider] = await Promise.all([
+    readFile(new URL("../components/demo/demo-meals.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/demo/demo-insights.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/demo/ai-foundation-panel.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../services/ai-foundation.ts", import.meta.url), "utf8"),
+    readFile(new URL("../services/meal-vision-provider.ts", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(demoMeals, /ai-estimated/);
+  assert.match(demoMeals, /ai-corrected/);
+  assert.match(demoMeals, /User-corrected AI estimate/);
+  assert.match(demoInsights, /Evidence: n =/);
+  assert.match(aiPanel, /Observed remains separate from predicted/);
+  assert.match(aiPanel, /No evaluated model/);
+  assert.match(aiPanel, /remain missing rather than being changed to zero/);
+  assert.match(aiService, /meal-prediction-features-v1/);
+  assert.match(aiService, /response\.dataQuality === "good"/);
+  assert.match(visionProvider, /interface MealVisionProvider/);
+  assert.doesNotMatch(aiPanel, /insulin dose|medication dose|treatment recommendation/i);
 });
 
 test("exports the required medical-safety language", async () => {

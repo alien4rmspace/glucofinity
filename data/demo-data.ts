@@ -34,8 +34,12 @@ export const initialDemoMeals: DemoMeal[] = [
     carbohydrates: 48,
     protein: 12,
     fat: 9,
+    fiber: 7,
+    calories: 338,
+    foods: "Oats, berries, chia seeds",
     note: "Fictional breakfast entry",
     source: "seed",
+    nutritionSource: "manual",
   },
   {
     id: "meal-lunch",
@@ -45,8 +49,12 @@ export const initialDemoMeals: DemoMeal[] = [
     carbohydrates: 63,
     protein: 34,
     fat: 18,
+    fiber: 9,
+    calories: 548,
+    foods: "Salmon, brown rice, roasted vegetables",
     note: "Fictional lunch entry with a 24-minute walk logged afterward",
     source: "seed",
+    nutritionSource: "manual",
   },
   {
     id: "meal-dinner",
@@ -56,8 +64,12 @@ export const initialDemoMeals: DemoMeal[] = [
     carbohydrates: 41,
     protein: 19,
     fat: 8,
+    fiber: 13,
+    calories: 312,
+    foods: "Lentils, tomato, carrots, leafy vegetables",
     note: "Fictional dinner entry",
     source: "seed",
+    nutritionSource: "manual",
   },
 ];
 

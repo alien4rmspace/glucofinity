@@ -74,15 +74,25 @@ The page demonstrates these concepts without claiming they are completed product
 
 - A 24-hour glucose dashboard with target-range context
 - Meal-photo recognition estimates and editable carbohydrate values
+- Provider-neutral structured meal estimates with editable foods, calories, macros,
+  and manual, AI-estimated, or user-corrected provenance
 - A post-meal glucose response view
 - A meal-centered response window with baseline, peak, rise, timing, 1-hour and 2-hour values, incremental area, return-near-baseline timing, and explicit data-quality states
 - Stable mock-source provenance and visible gaps when surrounding readings are incomplete
-- AI-assisted pattern summaries with cautious correlation language
+- Deterministic, versioned feature previews that leave unavailable context missing
+- Explicit fictional training eligibility based on meal-response coverage
+- Evidence-backed pattern summaries with sample sizes and cautious correlation language
+- Separate model responsibilities for meal vision, XGBoost-style tabular prediction,
+  continuous time-series forecasting, deterministic statistics, and explanation
 - Planned CGM and Apple Health integrations
 - Planned time-series, XGBoost-style, vision-language, and local language-model responsibilities
 - Privacy-focused product principles
 
-The site does not currently connect to CGM hardware, Apple Health, nutrition databases, medication systems, or AI models. It does not predict real glucose responses or store personal health information.
+The site does not currently connect to CGM hardware, Apple Health, nutrition databases,
+medication systems, paid AI services, trained prediction models, or external language
+models. It does not predict real glucose responses or store personal health information.
+The model registry, chronological evaluation, and XGBoost training concepts shown in the
+demo are architecture/readiness states rather than performance claims.
 
 ## Future development
 

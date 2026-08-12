@@ -17,7 +17,7 @@ export function Insights() {
             return (
               <article key={insight.title} className={`rounded-lg border border-[#d5e1ec] bg-white p-6 shadow-sm ${index < 2 ? "lg:col-span-3" : "lg:col-span-2"}`}>
                 <div className="flex items-start justify-between gap-4"><div className="grid size-10 place-items-center rounded-lg bg-[#edf5ff] text-[#1268e8]"><Icon className="size-5" aria-hidden="true" /></div><span className="rounded-full bg-[#eef7f5] px-2.5 py-1 text-[11px] font-semibold text-[#087f6a]">Sample insight</span></div>
-                <p className="mt-5 text-xs font-bold uppercase text-[#718096]">{insight.category}</p><h3 className="mt-2 text-lg font-semibold leading-7 text-[#0b1f33]">{insight.title}</h3><p className="mt-3 text-sm leading-6 text-[#526477]">{insight.description}</p><p className="mt-5 border-t border-[#e4ebf2] pt-4 text-xs font-semibold text-[#31506f]">{insight.context}</p>
+                <p className="mt-5 text-xs font-bold uppercase text-[#718096]">{insight.category}</p><h3 className="mt-2 text-lg font-semibold leading-7 text-[#0b1f33]">{insight.title}</h3><p className="mt-3 text-sm leading-6 text-[#526477]">{insight.description}</p><p className="mt-5 border-t border-[#e4ebf2] pt-4 text-xs font-semibold text-[#31506f]">Fictional evidence: {insight.context}</p>
               </article>
             );
           })}

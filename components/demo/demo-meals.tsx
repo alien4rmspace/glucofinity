@@ -4,16 +4,22 @@ import { Activity, Camera, Plus, Trash2, Utensils } from "lucide-react";
 import { type FormEvent, useState } from "react";
 import { MealResponseReview } from "@/components/demo/meal-response-review";
 import { DemoCard, DemoNotice, DemoSectionHeading } from "@/components/demo/demo-ui";
+import { mealVisionProvider } from "@/services/meal-vision-provider";
+import type { NutritionEstimateSource } from "@/types/ai";
 import type { DemoMeal, DemoMealDraft, DemoSettings } from "@/types/demo";
 
 const emptyDraft: DemoMealDraft = {
   name: "",
   time: "12:00 PM",
-  carbohydrates: 0,
-  protein: 0,
-  fat: 0,
+  carbohydrates: undefined,
+  protein: undefined,
+  fat: undefined,
+  fiber: undefined,
+  calories: undefined,
+  foods: "",
   note: "",
   source: "manual",
+  nutritionSource: "manual",
 };
 
 export function DemoMeals({
@@ -33,17 +39,28 @@ export function DemoMeals({
   const [selectedMealId, setSelectedMealId] = useState("meal-lunch");
   const selectedMeal = meals.find((meal) => meal.id === selectedMealId);
 
-  function simulateEstimate() {
+  async function simulateEstimate() {
+    const analysis = await mealVisionProvider.analyzeMeal(
+      "demo://meal-placeholder",
+      "Vegetable grain bowl",
+    );
     setDraft({
-      name: "Vegetable grain bowl",
+      name: analysis.foods.map((food) => food.name).join(", "),
       time: "1:15 PM",
-      carbohydrates: 56,
-      protein: 17,
-      fat: 14,
+      carbohydrates: analysis.totalCarbohydratesGrams ?? 0,
+      protein: analysis.totalProteinGrams ?? 0,
+      fat: analysis.totalFatGrams ?? 0,
+      fiber: analysis.totalFiberGrams ?? 0,
+      calories: analysis.totalCalories ?? 0,
+      foods: analysis.foods.map((food) => food.name).join(", "),
       note: "Simulated estimate for demonstration; values require user review.",
       source: "simulated-estimate",
+      nutritionSource: "ai-estimated",
+      analysisProvider: analysis.providerId,
+      analysisModel: analysis.model,
+      analysisGeneratedAt: analysis.generatedAt,
     });
-    setMessage("A fictional estimate was added to the form for your review.");
+    setMessage("A structured fictional estimate was added. Editing a nutrition field records it as user-corrected.");
     setFormOpen(true);
   }
 
@@ -60,9 +77,16 @@ export function DemoMeals({
     setFormOpen(false);
   }
 
-  function updateNumber(field: "carbohydrates" | "protein" | "fat", value: string) {
-    const parsed = Number(value);
-    setDraft((current) => ({ ...current, [field]: Number.isFinite(parsed) ? Math.max(0, parsed) : 0 }));
+  function updateNutritionNumber(
+    field: "calories" | "carbohydrates" | "protein" | "fat" | "fiber",
+    value: string,
+  ) {
+    const parsed = value.trim() ? Number(value) : undefined;
+    setDraft((current) => ({
+      ...current,
+      [field]: parsed !== undefined && Number.isFinite(parsed) ? Math.max(0, parsed) : undefined,
+      nutritionSource: correctedSource(current.nutritionSource),
+    }));
   }
 
   function selectMeal(mealId: string) {
@@ -95,7 +119,7 @@ export function DemoMeals({
       </DemoNotice>
 
       <div>
-        <button type="button" onClick={simulateEstimate} className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-[#cfc4fa] bg-[#f5f2ff] px-4 text-sm font-semibold text-[#6049bc] hover:bg-[#ede8ff]">
+        <button type="button" onClick={() => void simulateEstimate()} className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-[#cfc4fa] bg-[#f5f2ff] px-4 text-sm font-semibold text-[#6049bc] hover:bg-[#ede8ff]">
           <Camera className="size-4" aria-hidden="true" /> Load simulated estimate
         </button>
         <p className="mt-2 min-h-5 text-xs text-[#64768a]" aria-live="polite">{message}</p>
@@ -105,6 +129,17 @@ export function DemoMeals({
         <DemoCard className="p-5 sm:p-6">
           <form onSubmit={submitMeal} className="grid gap-5">
             <DemoSectionHeading title="Meal details" description="Review all estimated values before adding the entry." />
+            <div className="rounded-lg border border-[#ddd5fb] bg-[#f7f4ff] p-4">
+              <p className="text-sm font-semibold text-[#6049bc]">{nutritionSourceLabel(draft.nutritionSource)}</p>
+              <p className="mt-1 text-xs leading-5 text-[#64768a]">
+                {draft.nutritionSource === "manual"
+                  ? "Nutrition was entered manually in this browser session."
+                  : draft.nutritionSource === "ai-estimated"
+                    ? "This deterministic provider estimate still requires review."
+                    : "At least one generated food or nutrition value was changed by the user."}
+              </p>
+              {draft.analysisModel ? <p className="mt-2 text-[11px] text-[#718096]">Fixture provenance: {draft.analysisProvider} · {draft.analysisModel}</p> : null}
+            </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="grid gap-1.5 text-sm font-semibold text-[#34495e] sm:col-span-2">
                 Meal name
@@ -114,17 +149,29 @@ export function DemoMeals({
                 Time
                 <input value={draft.time} onChange={(event) => setDraft((current) => ({ ...current, time: event.target.value }))} className="h-11 rounded-lg border border-[#cbd8e4] bg-white px-3 font-normal text-[#0b1f33]" />
               </label>
+              <label className="grid gap-1.5 text-sm font-semibold text-[#34495e] sm:col-span-2">
+                Foods (comma separated)
+                <input value={draft.foods} onChange={(event) => setDraft((current) => ({ ...current, foods: event.target.value, nutritionSource: correctedSource(current.nutritionSource) }))} className="h-11 rounded-lg border border-[#cbd8e4] bg-white px-3 font-normal text-[#0b1f33]" placeholder="Example: Brown rice, salmon, vegetables" />
+              </label>
+              <label className="grid gap-1.5 text-sm font-semibold text-[#34495e]">
+                Estimated calories
+                <input type="number" min="0" max="10000" value={draft.calories ?? ""} onChange={(event) => updateNutritionNumber("calories", event.target.value)} className="h-11 rounded-lg border border-[#cbd8e4] bg-white px-3 font-normal text-[#0b1f33]" />
+              </label>
               <label className="grid gap-1.5 text-sm font-semibold text-[#34495e]">
                 Estimated carbohydrates (g)
-                <input type="number" min="0" max="500" value={draft.carbohydrates} onChange={(event) => updateNumber("carbohydrates", event.target.value)} className="h-11 rounded-lg border border-[#cbd8e4] bg-white px-3 font-normal text-[#0b1f33]" />
+                <input type="number" min="0" max="10000" value={draft.carbohydrates ?? ""} onChange={(event) => updateNutritionNumber("carbohydrates", event.target.value)} className="h-11 rounded-lg border border-[#cbd8e4] bg-white px-3 font-normal text-[#0b1f33]" />
               </label>
               <label className="grid gap-1.5 text-sm font-semibold text-[#34495e]">
                 Estimated protein (g)
-                <input type="number" min="0" max="500" value={draft.protein} onChange={(event) => updateNumber("protein", event.target.value)} className="h-11 rounded-lg border border-[#cbd8e4] bg-white px-3 font-normal text-[#0b1f33]" />
+                <input type="number" min="0" max="10000" value={draft.protein ?? ""} onChange={(event) => updateNutritionNumber("protein", event.target.value)} className="h-11 rounded-lg border border-[#cbd8e4] bg-white px-3 font-normal text-[#0b1f33]" />
               </label>
               <label className="grid gap-1.5 text-sm font-semibold text-[#34495e]">
                 Estimated fat (g)
-                <input type="number" min="0" max="500" value={draft.fat} onChange={(event) => updateNumber("fat", event.target.value)} className="h-11 rounded-lg border border-[#cbd8e4] bg-white px-3 font-normal text-[#0b1f33]" />
+                <input type="number" min="0" max="10000" value={draft.fat ?? ""} onChange={(event) => updateNutritionNumber("fat", event.target.value)} className="h-11 rounded-lg border border-[#cbd8e4] bg-white px-3 font-normal text-[#0b1f33]" />
+              </label>
+              <label className="grid gap-1.5 text-sm font-semibold text-[#34495e]">
+                Estimated fiber (g)
+                <input type="number" min="0" max="10000" value={draft.fiber ?? ""} onChange={(event) => updateNutritionNumber("fiber", event.target.value)} className="h-11 rounded-lg border border-[#cbd8e4] bg-white px-3 font-normal text-[#0b1f33]" />
               </label>
               <label className="grid gap-1.5 text-sm font-semibold text-[#34495e] sm:col-span-2">
                 Notes
@@ -165,7 +212,7 @@ export function DemoMeals({
                   <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-[#f0edff] text-[#7257d9]"><Utensils className="size-5" aria-hidden="true" /></span>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                      <div><h3 className="font-semibold text-[#0b1f33]">{meal.name}</h3><p className="mt-1 text-xs text-[#718096]">{meal.time} · {meal.source === "simulated-estimate" ? "Simulated estimate" : meal.source === "manual" ? "Session entry" : "Fictional seed entry"}</p></div>
+                      <div><h3 className="font-semibold text-[#0b1f33]">{meal.name}</h3><p className="mt-1 text-xs text-[#718096]">{meal.time} · {meal.source === "simulated-estimate" ? "Simulated estimate" : meal.source === "manual" ? "Session entry" : "Fictional seed entry"} · {nutritionSourceLabel(meal.nutritionSource)}</p></div>
                       <div className="flex shrink-0 items-center gap-2">
                         <button
                           type="button"
@@ -180,11 +227,14 @@ export function DemoMeals({
                         <button type="button" onClick={() => removeMeal(meal.id)} aria-label={`Remove ${meal.name}`} className="grid size-9 shrink-0 place-items-center rounded-lg border border-[#ead3d3] text-[#a43b3b] hover:bg-[#fff1f1]"><Trash2 className="size-4" aria-hidden="true" /></button>
                       </div>
                     </div>
-                    <dl className="mt-4 grid grid-cols-3 gap-2 text-center">
-                      <div className="rounded-lg bg-[#f7fafc] p-2"><dt className="text-[11px] text-[#718096]">Carbs</dt><dd className="mt-1 text-sm font-semibold text-[#0b1f33]">{meal.carbohydrates} g</dd></div>
-                      <div className="rounded-lg bg-[#f7fafc] p-2"><dt className="text-[11px] text-[#718096]">Protein</dt><dd className="mt-1 text-sm font-semibold text-[#0b1f33]">{meal.protein} g</dd></div>
-                      <div className="rounded-lg bg-[#f7fafc] p-2"><dt className="text-[11px] text-[#718096]">Fat</dt><dd className="mt-1 text-sm font-semibold text-[#0b1f33]">{meal.fat} g</dd></div>
+                    <dl className="mt-4 grid grid-cols-2 gap-2 text-center sm:grid-cols-5">
+                      <div className="rounded-lg bg-[#f7fafc] p-2"><dt className="text-[11px] text-[#718096]">Calories</dt><dd className="mt-1 text-sm font-semibold text-[#0b1f33]">{formatNutrition(meal.calories)}</dd></div>
+                      <div className="rounded-lg bg-[#f7fafc] p-2"><dt className="text-[11px] text-[#718096]">Carbs</dt><dd className="mt-1 text-sm font-semibold text-[#0b1f33]">{formatNutrition(meal.carbohydrates, "g")}</dd></div>
+                      <div className="rounded-lg bg-[#f7fafc] p-2"><dt className="text-[11px] text-[#718096]">Protein</dt><dd className="mt-1 text-sm font-semibold text-[#0b1f33]">{formatNutrition(meal.protein, "g")}</dd></div>
+                      <div className="rounded-lg bg-[#f7fafc] p-2"><dt className="text-[11px] text-[#718096]">Fat</dt><dd className="mt-1 text-sm font-semibold text-[#0b1f33]">{formatNutrition(meal.fat, "g")}</dd></div>
+                      <div className="rounded-lg bg-[#f7fafc] p-2"><dt className="text-[11px] text-[#718096]">Fiber</dt><dd className="mt-1 text-sm font-semibold text-[#0b1f33]">{formatNutrition(meal.fiber, "g")}</dd></div>
                     </dl>
+                    <p className="mt-3 text-xs leading-5 text-[#64768a]">Foods: {meal.foods || "Not specified"}</p>
                     {meal.note ? <p className="mt-3 text-xs leading-5 text-[#64768a]">{meal.note}</p> : null}
                   </div>
                 </div>
@@ -195,4 +245,18 @@ export function DemoMeals({
       </section>
     </div>
   );
+}
+
+function correctedSource(source: NutritionEstimateSource): NutritionEstimateSource {
+  return source === "ai-estimated" ? "ai-corrected" : source;
+}
+
+function nutritionSourceLabel(source: NutritionEstimateSource): string {
+  if (source === "ai-estimated") return "AI-estimated nutrition";
+  if (source === "ai-corrected") return "User-corrected AI estimate";
+  return "Manual nutrition";
+}
+
+function formatNutrition(value: number | undefined, unit = ""): string {
+  return value === undefined ? "Not available" : `${value}${unit ? ` ${unit}` : ""}`;
 }

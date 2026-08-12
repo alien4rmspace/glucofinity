@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 const basePath = "/glucofinity";
-const siteUrl = `https://alien4rmspace.github.io${basePath}`;
+const siteUrl = `https://damiansaelee.com${basePath}`;
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -26,22 +26,22 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "GlucoFinity",
-    description: "Discover the possibilities within your glucose data.",
+    description: "Evidence-backed, reviewable AI/ML foundations for glucose patterns.",
     type: "website",
     url: siteUrl,
     images: [
       {
         url: `${siteUrl}/og.png`,
-        width: 1680,
-        height: 941,
-        alt: "GlucoFinity glucose pattern dashboard preview",
+        width: 1536,
+        height: 1024,
+        alt: "GlucoFinity evidence-first AI and glucose pattern architecture",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
     title: "GlucoFinity",
-    description: "Discover the possibilities within your glucose data.",
+    description: "Evidence-backed, reviewable AI/ML foundations for glucose patterns.",
     images: [`${siteUrl}/og.png`],
   },
 };
