@@ -21,12 +21,9 @@ import {
   WEB_LFM_PROVIDER_ID,
 } from "@/services/browser-meal-language-provider";
 import {
-  createLocalSpeechRecognition,
-  getLocalSpeechSupport,
-  installLocalSpeechPack,
-  speechErrorMessage,
-  type BrowserSpeechRecognition,
-} from "@/services/browser-speech-service";
+  browserWhisperSpeechProvider,
+  WEB_WHISPER_MODEL_ID,
+} from "@/services/browser-whisper-speech-provider";
 import {
   estimateLocalNutrition,
   findLocalNutritionSuggestions,
@@ -34,10 +31,7 @@ import {
 } from "@/services/local-nutrition-estimator";
 import { deriveMealNameFromFoods } from "@/services/meal-transcript-extraction";
 import type { LocalNutritionEstimate, MacroNutrients } from "@/types/nutrition";
-import type {
-  BrowserSpeechSupport,
-  LocalMealModelState,
-} from "@/types/voice-entry";
+import type { LocalMealModelState } from "@/types/voice-entry";
 import { DemoCard } from "@/components/demo/demo-ui";
 
 type VoiceDraft = {
@@ -74,19 +68,15 @@ export function VoiceMealEntry({
   onApply: (draft: AppliedBrowserVoiceMealDraft) => void;
   onAdd: (draft: AppliedBrowserVoiceMealDraft) => void;
 }) {
-  const recognitionRef = useRef<BrowserSpeechRecognition | undefined>(undefined);
   const transcriptRef = useRef("");
-  const recordingRequestedRef = useRef(false);
-  const fatalSpeechErrorRef = useRef(false);
-  const restartTimerRef = useRef<number | undefined>(undefined);
-  const [speechSupport, setSpeechSupport] = useState<BrowserSpeechSupport>({
-    availability: "checking",
-    message: "Checking this browser's local speech support.",
-  });
-  const [modelState, setModelState] = useState<LocalMealModelState>(
+  const [speechModelState, setSpeechModelState] = useState<LocalMealModelState>(
+    browserWhisperSpeechProvider.getState(),
+  );
+  const [lfmModelState, setLfmModelState] = useState<LocalMealModelState>(
     browserMealLanguageProvider.getState(),
   );
-  const [modelAccessMessage, setModelAccessMessage] = useState<string>();
+  const [speechAccessMessage, setSpeechAccessMessage] = useState<string>();
+  const [lfmAccessMessage, setLfmAccessMessage] = useState<string>();
   const [transcript, setTranscript] = useState("");
   const [recording, setRecording] = useState(false);
   const [processing, setProcessing] = useState(false);
@@ -98,117 +88,54 @@ export function VoiceMealEntry({
 
   useEffect(() => {
     let active = true;
-    const unsubscribe = browserMealLanguageProvider.subscribe(setModelState);
+    const unsubscribeSpeech = browserWhisperSpeechProvider.subscribe(setSpeechModelState);
+    const unsubscribeLfm = browserMealLanguageProvider.subscribe(setLfmModelState);
     void Promise.all([
-      getLocalSpeechSupport(),
+      browserWhisperSpeechProvider.getAccessMessage(),
       browserMealLanguageProvider.getAccessMessage(),
-    ]).then(([speech, modelMessage]) => {
+    ]).then(([speechMessage, lfmMessage]) => {
       if (!active) return;
-      setSpeechSupport(speech);
-      setModelAccessMessage(modelMessage);
+      setSpeechAccessMessage(speechMessage);
+      setLfmAccessMessage(lfmMessage);
     });
     return () => {
       active = false;
-      unsubscribe();
-      recordingRequestedRef.current = false;
-      if (restartTimerRef.current !== undefined) {
-        window.clearTimeout(restartTimerRef.current);
-      }
-      const recognition = recognitionRef.current;
-      recognitionRef.current = undefined;
-      if (recognition) {
-        recognition.onend = null;
-        recognition.abort();
-      }
+      unsubscribeSpeech();
+      unsubscribeLfm();
+      browserWhisperSpeechProvider.cancelRecording();
     };
   }, []);
 
-  async function prepareModel() {
+  async function prepareModels() {
     setActionMessage("");
-    try {
-      await browserMealLanguageProvider.prepare();
-      setActionMessage("LFM2.5 is ready in this browser.");
-    } catch (error) {
-      setActionMessage(
-        error instanceof Error ? error.message : "The local model could not be prepared.",
-      );
+    const errors: string[] = [];
+    if (!speechAccessMessage && speechModelState.status !== "ready") {
+      try {
+        await browserWhisperSpeechProvider.prepare();
+        setActionMessage("Distil-Whisper is ready. Preparing LFM2.5 locally.");
+      } catch (error) {
+        errors.push(error instanceof Error ? error.message : "Distil-Whisper could not load.");
+      }
     }
-  }
-
-  async function installSpeech() {
-    setSpeechSupport({
-      availability: "downloading",
-      message: "Installing the browser's local English speech pack.",
-    });
-    setSpeechSupport(await installLocalSpeechPack());
-  }
-
-  function finishRecordedTranscript() {
-    recordingRequestedRef.current = false;
-    setRecording(false);
-    if (fatalSpeechErrorRef.current) return;
-    const reviewedTranscript = transcriptRef.current.trim();
-    if (reviewedTranscript) {
-      void extractDraft(reviewedTranscript);
+    if (!lfmAccessMessage && lfmModelState.status !== "ready") {
+      try {
+        await browserMealLanguageProvider.prepare();
+      } catch (error) {
+        errors.push(error instanceof Error ? error.message : "LFM2.5 could not load.");
+      }
+    }
+    if (errors.length > 0) {
+      setActionMessage(errors.join(" "));
+    } else if (speechAccessMessage) {
+      setActionMessage("LFM2.5 is ready for typed meal descriptions; voice is unavailable here.");
     } else {
-      setActionMessage("No speech was detected. Try again or type the meal description.");
+      setActionMessage("Distil-Whisper and LFM2.5 are ready in this browser.");
     }
   }
 
-  function beginRecognitionSegment() {
-    const recognition = createLocalSpeechRecognition();
-    const segmentBase = transcriptRef.current.trim();
-    recognitionRef.current = recognition;
-    recognition.onresult = (event) => {
-      const parts: string[] = [];
-      for (let index = 0; index < event.results.length; index += 1) {
-        const result = event.results[index];
-        if (result?.[0]?.transcript) parts.push(result[0].transcript);
-      }
-      const segmentTranscript = parts.join(" ").trim();
-      const nextTranscript = [segmentBase, segmentTranscript].filter(Boolean).join(" ").trim();
-      transcriptRef.current = nextTranscript;
-      setTranscript(nextTranscript);
-    };
-    recognition.onerror = (event) => {
-      if (!recordingRequestedRef.current) return;
-      if (event.error === "no-speech") {
-        setActionMessage("Still listening. Keep speaking, or press Stop recording when finished.");
-        return;
-      }
-      fatalSpeechErrorRef.current = true;
-      recordingRequestedRef.current = false;
-      setActionMessage(speechErrorMessage(event.error));
-    };
-    recognition.onend = () => {
-      if (recognitionRef.current === recognition) recognitionRef.current = undefined;
-      if (recordingRequestedRef.current && !fatalSpeechErrorRef.current) {
-        restartTimerRef.current = window.setTimeout(() => {
-          restartTimerRef.current = undefined;
-          if (!recordingRequestedRef.current) return;
-          try {
-            beginRecognitionSegment();
-          } catch (error) {
-            fatalSpeechErrorRef.current = true;
-            recordingRequestedRef.current = false;
-            setRecording(false);
-            setActionMessage(
-              error instanceof Error
-                ? error.message
-                : "Local speech recognition could not continue.",
-            );
-          }
-        }, 100);
-        return;
-      }
-      finishRecordedTranscript();
-    };
-    recognition.start();
-  }
-
-  function startRecording() {
-    if (modelState.status !== "ready") {
-      setActionMessage("Prepare LFM2.5 before recording a meal description.");
+  async function startRecording() {
+    if (speechModelState.status !== "ready" || lfmModelState.status !== "ready") {
+      setActionMessage("Prepare Distil-Whisper and LFM2.5 before recording.");
       return;
     }
     setVoiceDraft(undefined);
@@ -216,33 +143,39 @@ export function VoiceMealEntry({
     setFoodEditValue("");
     setTranscript("");
     transcriptRef.current = "";
-    fatalSpeechErrorRef.current = false;
-    recordingRequestedRef.current = true;
-    setRecording(true);
-    setActionMessage("Recording. Speak naturally, then press Stop recording when finished.");
 
     try {
-      beginRecognitionSegment();
+      await browserWhisperSpeechProvider.startRecording();
+      setRecording(true);
+      setActionMessage(
+        "Recording locally. Speak naturally, then press Stop recording when finished.",
+      );
     } catch (error) {
-      fatalSpeechErrorRef.current = true;
-      recordingRequestedRef.current = false;
       setRecording(false);
       setActionMessage(
-        error instanceof Error ? error.message : "Local speech recognition could not start.",
+        error instanceof Error ? error.message : "Local audio recording could not start.",
       );
     }
   }
 
-  function stopRecording() {
-    recordingRequestedRef.current = false;
-    if (restartTimerRef.current !== undefined) {
-      window.clearTimeout(restartTimerRef.current);
-      restartTimerRef.current = undefined;
+  async function stopRecording() {
+    setRecording(false);
+    setProcessing(true);
+    setActionMessage("Distil-Whisper is transcribing the complete recording locally.");
+    try {
+      const reviewedTranscript = (
+        await browserWhisperSpeechProvider.stopRecordingAndTranscribe()
+      ).trim();
+      transcriptRef.current = reviewedTranscript;
+      setTranscript(reviewedTranscript);
+      await extractDraft(reviewedTranscript);
+    } catch (error) {
+      setActionMessage(
+        error instanceof Error ? error.message : "The local recording could not be transcribed.",
+      );
+    } finally {
+      setProcessing(false);
     }
-    setActionMessage("Finishing the local transcript.");
-    const recognition = recognitionRef.current;
-    if (recognition) recognition.stop();
-    else finishRecordedTranscript();
   }
 
   async function extractDraft(value = transcript) {
@@ -402,8 +335,13 @@ export function VoiceMealEntry({
     setActionMessage("The reviewed meal was added directly to this browser session.");
   }
 
-  const modelReady = modelState.status === "ready";
-  const speechReady = speechSupport.availability === "available";
+  const speechModelReady = speechModelState.status === "ready";
+  const lfmModelReady = lfmModelState.status === "ready";
+  const modelsReady = speechModelReady && lfmModelReady;
+  const modelsPreparing =
+    speechModelState.status === "preparing" || lfmModelState.status === "preparing";
+  const availableModelsReady =
+    lfmModelReady && (speechModelReady || Boolean(speechAccessMessage));
   const draftHasMeal = Boolean(
     voiceDraft?.mealName.trim() || splitFoodDescriptions(voiceDraft?.foodsText ?? "").length,
   );
@@ -419,9 +357,9 @@ export function VoiceMealEntry({
             Voice meal entry
           </h2>
           <p className="mt-1 max-w-3xl text-sm leading-6 text-[#64768a]">
-            Use local browser speech or type a description. LFM2.5 extracts the meal name,
-            foods, and stated portions; a compact local reference then prepares reviewable
-            nutrition estimates.
+            Distil-Whisper transcribes a complete local recording or you can type a
+            description. LFM2.5 extracts the meal name, foods, and stated portions; a compact
+            local reference then prepares reviewable nutrition estimates.
           </p>
         </div>
       </div>
@@ -432,9 +370,10 @@ export function VoiceMealEntry({
           <div>
             <p className="text-sm font-semibold text-[#21643f]">Local processing only</p>
             <p className="mt-1 text-xs leading-5 text-[#526f60]">
-              GlucoFinity does not upload the transcript or call an AI API. If the browser
-              cannot guarantee local speech processing, voice recording stays disabled.
-              Use only fictional meal descriptions in this public prototype.
+              GlucoFinity does not upload the audio or transcript and does not call an AI API.
+              Model files are downloaded on first use and reused locally. If this browser
+              cannot run the models on-device, voice recording stays disabled. Use only
+              fictional meal descriptions in this public prototype.
             </p>
           </div>
         </div>
@@ -443,74 +382,72 @@ export function VoiceMealEntry({
           <div className="flex items-start gap-3">
             <Cpu className="mt-0.5 size-5 shrink-0 text-[#6049bc]" aria-hidden="true" />
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-[#0b1f33]">1. Prepare local LFM2.5</p>
+              <p className="text-sm font-semibold text-[#0b1f33]">
+                1. Prepare local Distil-Whisper and LFM2.5
+              </p>
               <p className="mt-1 text-xs leading-5 text-[#64768a]">
-                The first use downloads the approximately 850 MB Q4 model and stores reusable
-                files in this browser. WebGPU and an internet connection are required for setup.
+                The first use downloads the English Distil-Whisper speech model plus the
+                approximately 850 MB Q4 language model and stores reusable files in this
+                browser. WebGPU and an internet connection are required for setup.
               </p>
             </div>
           </div>
-          {modelAccessMessage ? (
+          {lfmAccessMessage ? (
             <p className="rounded-lg bg-[#fff7e6] px-3 py-2 text-xs leading-5 text-[#7a5411]">
-              {modelAccessMessage}
+              {lfmAccessMessage}
             </p>
           ) : (
             <button
               type="button"
-              onClick={() => void prepareModel()}
-              disabled={modelState.status === "preparing" || modelReady}
+              onClick={() => void prepareModels()}
+              disabled={modelsPreparing || availableModelsReady}
               className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-[#cfc4fa] bg-[#f5f2ff] px-4 text-sm font-semibold text-[#6049bc] hover:bg-[#ede8ff] disabled:cursor-not-allowed disabled:opacity-65 sm:w-fit"
             >
               <Download className="size-4" aria-hidden="true" />
-              {modelState.status === "preparing"
-                ? `Preparing LFM2.5 (${modelState.progress}%)`
-                : modelReady
-                  ? "LFM2.5 ready"
-                  : modelState.status === "error"
-                    ? "Retry local model setup"
-                    : "Prepare local model"}
+              {speechModelState.status === "preparing"
+                ? `Preparing Distil-Whisper (${speechModelState.progress}%)`
+                : lfmModelState.status === "preparing"
+                  ? `Preparing LFM2.5 (${lfmModelState.progress}%)`
+                  : availableModelsReady
+                    ? speechModelReady
+                      ? "Local models ready"
+                      : "LFM2.5 ready for typed entry"
+                    : speechModelState.status === "error" || lfmModelState.status === "error"
+                      ? "Retry local model setup"
+                      : "Prepare local models"}
             </button>
           )}
-          {modelState.status === "preparing" ? (
-            <div
-              className="h-2 overflow-hidden rounded-full bg-[#e8e2fb]"
-              role="progressbar"
-              aria-label="Local model preparation"
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={modelState.progress}
-            >
-              <span
-                className="block h-full rounded-full bg-[#7257d9] transition-[width]"
-                style={{ width: `${modelState.progress}%` }}
-              />
-            </div>
+          {speechAccessMessage ? (
+            <p className="rounded-lg bg-[#fff7e6] px-3 py-2 text-xs leading-5 text-[#7a5411]">
+              {speechAccessMessage} Typed meal entry remains available after preparing LFM2.5.
+            </p>
+          ) : null}
+          {speechModelState.status === "preparing" ? (
+            <ModelProgress label="Distil-Whisper preparation" value={speechModelState.progress} />
+          ) : null}
+          {lfmModelState.status === "preparing" ? (
+            <ModelProgress label="LFM2.5 preparation" value={lfmModelState.progress} />
           ) : null}
         </div>
 
         <div className="grid gap-3 rounded-lg border border-[#dce5ee] bg-white p-4">
           <div>
             <p className="text-sm font-semibold text-[#0b1f33]">2. Speak or type the meal</p>
-            <p className="mt-1 text-xs leading-5 text-[#64768a]">{speechSupport.message}</p>
+            <p className="mt-1 text-xs leading-5 text-[#64768a]">
+              {speechModelReady
+                ? "Distil-Whisper is ready to transcribe a complete recording locally."
+                : "Prepare the local models before recording. Typed meal entry remains available once LFM2.5 is ready."}
+            </p>
             <p className="mt-1 text-xs leading-5 text-[#64768a]">
               Press once to start recording. Pauses will not submit the meal; press the same
               button again when you are finished. You can name several foods and portions in
-              one recording.
+              one recording. The transcript appears after Distil-Whisper processes the clip.
             </p>
           </div>
-          {speechSupport.availability === "downloadable" ? (
-            <button
-              type="button"
-              onClick={() => void installSpeech()}
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-[#b8d3f0] bg-[#edf5ff] px-4 text-sm font-semibold text-[#0e5ab7] hover:bg-[#e2effe] sm:w-fit"
-            >
-              <Download className="size-4" aria-hidden="true" /> Install local speech pack
-            </button>
-          ) : null}
           <button
             type="button"
-            onClick={recording ? stopRecording : startRecording}
-            disabled={!speechReady || !modelReady || processing}
+            onClick={() => void (recording ? stopRecording() : startRecording())}
+            disabled={!modelsReady || processing}
             aria-pressed={recording}
             className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 sm:w-fit ${
               recording ? "bg-[#a43b3b] hover:bg-[#8c3030]" : "bg-[#1268e8] hover:bg-[#0f57c3]"
@@ -524,7 +461,7 @@ export function VoiceMealEntry({
             {recording ? "Stop recording and process" : "Start recording"}
           </button>
           <label className="grid gap-1.5 text-sm font-semibold text-[#34495e]">
-            Local transcript or typed description
+            Distil-Whisper transcript or typed description
             <textarea
               value={transcript}
               onChange={(event) => {
@@ -541,7 +478,7 @@ export function VoiceMealEntry({
           <button
             type="button"
             onClick={() => void extractDraft()}
-            disabled={!modelReady || !transcript.trim() || recording || processing}
+            disabled={!lfmModelReady || !transcript.trim() || recording || processing}
             className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#6049bc] px-4 text-sm font-semibold text-white hover:bg-[#513da4] disabled:cursor-not-allowed disabled:opacity-50 sm:w-fit"
           >
             <WandSparkles className="size-4" aria-hidden="true" />
@@ -839,9 +776,10 @@ export function VoiceMealEntry({
             </button>
           </div>
           <p className="text-[11px] leading-5 text-[#718096]">
-            Provenance: local {WEB_LFM_MODEL_ID} extracts transcript-grounded foods; local{" "}
-            {voiceDraft.nutritionEstimate.sourceId} calculates nutrition. Neither predicts
-            glucose effects or provides medical guidance.
+            Provenance: local {WEB_WHISPER_MODEL_ID} transcribes recorded audio; local{" "}
+            {WEB_LFM_MODEL_ID} extracts transcript-grounded foods; local{" "}
+            {voiceDraft.nutritionEstimate.sourceId} calculates nutrition. None predicts glucose
+            effects or provides medical guidance.
           </p>
         </DemoCard>
       ) : null}
@@ -865,6 +803,24 @@ function NutritionMetric({
         {value}
         {unit ? ` ${unit}` : ""}
       </dd>
+    </div>
+  );
+}
+
+function ModelProgress({ label, value }: { label: string; value: number }) {
+  return (
+    <div
+      className="h-2 overflow-hidden rounded-full bg-[#e8e2fb]"
+      role="progressbar"
+      aria-label={label}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={value}
+    >
+      <span
+        className="block h-full rounded-full bg-[#7257d9] transition-[width]"
+        style={{ width: `${value}%` }}
+      />
     </div>
   );
 }

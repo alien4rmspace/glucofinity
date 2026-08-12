@@ -80,7 +80,8 @@ The page demonstrates these concepts without claiming they are completed product
 - Meal-photo recognition estimates and editable carbohydrate values
 - Provider-neutral structured meal estimates with editable foods, calories, macros,
   and manual, AI-estimated, or user-corrected provenance
-- Optional on-device browser speech recognition with a typed-transcript fallback
+- User-controlled whole-clip recording and local Distil-Whisper transcription with a
+  typed-description fallback
 - User-triggered LFM2.5-1.2B-Instruct Q4 browser inference through Transformers.js
   and WebGPU, constrained to transcript-grounded meal names, foods, and stated portions
 - Deterministic local estimates for calories, carbohydrates, protein, fat, and fiber
