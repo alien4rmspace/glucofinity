@@ -80,7 +80,29 @@ const PORTION_WORDS = new Set([
   "containers",
 ]);
 
-const CONNECTOR_WORDS = new Set(["and", "of"]);
+const CONNECTOR_WORDS = new Set([
+  "and",
+  "of",
+  "plus",
+  "with",
+  "then",
+  "also",
+  "next",
+  "finally",
+  "afterward",
+  "afterwards",
+]);
+
+const FOOD_BOUNDARY_CONNECTOR_PATTERN =
+  "(?:and|plus|with|then|also|next|finally|afterwards?)";
+const LEADING_FOOD_CONNECTORS = new RegExp(
+  `^(?:${FOOD_BOUNDARY_CONNECTOR_PATTERN}(?:\\s+|$))+`,
+  "i",
+);
+const TRAILING_FOOD_CONNECTORS = new RegExp(
+  `(?:\\s+${FOOD_BOUNDARY_CONNECTOR_PATTERN})+$`,
+  "i",
+);
 
 const SPOKEN_NUMBER_PATTERN =
   "(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred)";
@@ -186,12 +208,22 @@ function splitUnpunctuatedPortionClauses(value: string): string[] {
   );
 }
 
+function cleanFoodClause(value: string): string {
+  return value
+    .trim()
+    .replace(/[.!?]+$/u, "")
+    .trim()
+    .replace(LEADING_FOOD_CONNECTORS, "")
+    .replace(TRAILING_FOOD_CONNECTORS, "")
+    .trim();
+}
+
 function splitFoodClauses(value: string): string[] {
   const reviewed = removeLeadingMealContext(value);
   return reviewed
     .split(/\s*(?:,|;)\s*|\s+(?:and|plus|with)\s+(?!a\s+half\b)/i)
-    .map((food) => food.replace(/^(?:and|plus|with)\s+/i, "").trim())
     .flatMap(splitUnpunctuatedPortionClauses)
+    .map(cleanFoodClause)
     .filter((food) => food.length > 0 && food.length <= MAX_FOOD_NAME_LENGTH)
     .slice(0, MAX_FOODS);
 }
@@ -277,7 +309,7 @@ export function buildMealTranscriptMessages(transcript: string) {
     {
       role: "system" as const,
       content:
-        'Extract editable meal details from the transcript. Return only JSON with this exact shape: {"mealName":"food-name summary only","foods":["food and portion explicitly stated"]}. The mealName must contain food names, never meal types such as breakfast, lunch, dinner, or snack. Return one foods array item for every explicitly stated food, including its own stated quantity and unit; never combine multiple foods into one item and never return a quantity or unit alone. Speech transcripts may omit all punctuation and connector words; repeated quantities and units start separate foods. Examples: {"mealName":"White rice","foods":["nine grams of white rice"]} and {"mealName":"Brown rice, salmon","foods":["nine grams of brown rice","five grams of salmon"]}. Preserve stated quantities and units. Use only words, quantities, units, and foods stated in the transcript. Omit uncertain details. Do not estimate nutrition, glucose effects, medication, diagnosis, treatment, or advice.',
+        'Extract editable meal details from the transcript. Return only JSON with this exact shape: {"mealName":"food-name summary only","foods":["food and portion explicitly stated"]}. The mealName must contain food names, never meal types such as breakfast, lunch, dinner, or snack. Return one foods array item for every explicitly stated food, including its own stated quantity and unit; never combine multiple foods into one item and never return a quantity or unit alone. Never return a discourse connector such as then or also alone. Speech transcripts may omit all punctuation and connector words; repeated quantities and units start separate foods. Examples: {"mealName":"White rice","foods":["nine grams of white rice"]} and {"mealName":"Brown rice, salmon","foods":["nine grams of brown rice","five grams of salmon"]}. Preserve stated quantities and units. Use only words, quantities, units, and foods stated in the transcript. Omit uncertain details. Do not estimate nutrition, glucose effects, medication, diagnosis, treatment, or advice.',
     },
     {
       role: "user" as const,

@@ -107,7 +107,7 @@ test("suggests a close local food for a speech-recognition typo", () => {
 });
 
 test("returns food-family suggestions when an unmatched food has no close text match", () => {
-  const suggestions = findLocalNutritionSuggestions("a cup of lettuce");
+  const suggestions = findLocalNutritionSuggestions("a cup of lettuce.");
 
   assert.deepEqual(
     suggestions.map(({ name, matchBasis }) => ({ name, matchBasis })),
