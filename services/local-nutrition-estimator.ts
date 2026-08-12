@@ -152,6 +152,7 @@ function normalize(value: string): string {
     .replace(/¾/g, " 3/4 ")
     .replace(/%/g, " percent ")
     .replace(/[^\p{L}\p{N}/.]+/gu, " ")
+    .replace(/\.(?=\s|$)/g, " ")
     .trim()
     .replace(/\s+/g, " ");
 }

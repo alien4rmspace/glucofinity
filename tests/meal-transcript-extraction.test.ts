@@ -18,6 +18,7 @@ test("constrains local LFM extraction to non-medical meal fields", () => {
   assert.match(messages[0].content, /Preserve stated quantities and units/);
   assert.match(messages[0].content, /never meal types such as breakfast, lunch, dinner, or snack/);
   assert.match(messages[0].content, /never return a quantity or unit alone/);
+  assert.match(messages[0].content, /discourse connector such as then or also alone/);
   assert.match(messages[0].content, /may omit all punctuation and connector words/);
   assert.match(messages[0].content, /medication, diagnosis, treatment, or advice/);
 });
@@ -118,6 +119,33 @@ test("removes spoken meal context and repairs a misheard grams unit", () => {
   assert.equal(nutrition.foods[0]?.estimatedGrams, 9);
   assert.equal(nutrition.foods[1]?.estimatedGrams, 20);
   assert.equal(nutrition.foods[2]?.matchedName, undefined);
+});
+
+test("drops spoken transition words and sentence punctuation between foods", () => {
+  const connectorTranscript =
+    "Today I had 9 grams of brown rice, 6 grams of salmon, and then a cup of lettuce.";
+  const connectorModelOutput =
+    '{"mealName":"Brown Rice Salmon Then Lettuce","foods":["9 grams of brown rice","6 grams of salmon","then","a cup of lettuce."]}';
+
+  const modelResult = parseMealTranscriptExtraction(
+    connectorModelOutput,
+    connectorTranscript,
+  );
+  const fallbackResult = extractGroundedMealFromTranscript(connectorTranscript);
+  const expectedFoods = [
+    "9 grams of brown rice",
+    "6 grams of salmon",
+    "a cup of lettuce",
+  ];
+
+  assert.deepEqual(modelResult.foods, expectedFoods);
+  assert.deepEqual(fallbackResult.foods, expectedFoods);
+  assert.equal(modelResult.mealName, "Brown Rice, Salmon, Lettuce");
+  assert.equal(fallbackResult.mealName, "Brown Rice, Salmon, Lettuce");
+
+  const nutrition = estimateLocalNutrition(modelResult.foods);
+  assert.equal(nutrition.matchedFoodCount, 2);
+  assert.equal(nutrition.foods.length, 3);
 });
 
 test("accepts transcript-grounded meal details", () => {
