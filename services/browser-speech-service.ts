@@ -153,7 +153,7 @@ export function createLocalSpeechRecognition(): BrowserSpeechRecognition {
   }
   const recognition = new Recognition();
   recognition.lang = SPEECH_LANGUAGE;
-  recognition.continuous = false;
+  recognition.continuous = true;
   recognition.interimResults = true;
   recognition.maxAlternatives = 1;
   recognition.processLocally = true;

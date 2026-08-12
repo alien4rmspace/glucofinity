@@ -35,7 +35,7 @@ test("exports the complete GlucoFinity prototype", async () => {
 });
 
 test("keeps the AI foundation evidence-first and reviewable", async () => {
-  const [demoMeals, demoInsights, mealAnalysis, aiPanel, aiService, visionProvider, voiceEntry, mealTimeSelect, localModel, nutritionEstimator, nutritionReference] = await Promise.all([
+  const [demoMeals, demoInsights, mealAnalysis, aiPanel, aiService, visionProvider, voiceEntry, mealTimeSelect, browserSpeech, localModelProvider, localModel, nutritionEstimator, nutritionReference] = await Promise.all([
     readFile(new URL("../components/demo/demo-meals.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/demo/demo-insights.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/sections/meal-analysis.tsx", import.meta.url), "utf8"),
@@ -44,7 +44,9 @@ test("keeps the AI foundation evidence-first and reviewable", async () => {
     readFile(new URL("../services/meal-vision-provider.ts", import.meta.url), "utf8"),
     readFile(new URL("../components/demo/voice-meal-entry.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/demo/meal-time-select.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../services/browser-speech-service.ts", import.meta.url), "utf8"),
     readFile(new URL("../services/browser-meal-language-provider.ts", import.meta.url), "utf8"),
+    readFile(new URL("../services/meal-transcript-extraction.ts", import.meta.url), "utf8"),
     readFile(new URL("../services/local-nutrition-estimator.ts", import.meta.url), "utf8"),
     readFile(new URL("../data/local-nutrition-reference.ts", import.meta.url), "utf8"),
   ]);
@@ -69,6 +71,12 @@ test("keeps the AI foundation evidence-first and reviewable", async () => {
   assert.match(voiceEntry, /Edit nutrition/);
   assert.match(voiceEntry, /Continue in full form/);
   assert.match(voiceEntry, /Add to session/);
+  assert.match(voiceEntry, /Press once to start recording/);
+  assert.match(voiceEntry, /recordingRequestedRef/);
+  assert.match(voiceEntry, /beginRecognitionSegment/);
+  assert.match(browserSpeech, /recognition\.continuous = true/);
+  assert.match(localModelProvider, /groundedFallback/);
+  assert.match(localModel, /one foods array item for every explicitly stated food/);
   assert.equal(voiceEntry.match(/step="any"/g)?.length, 1);
   assert.equal(voiceEntry.match(/inputMode="decimal"/g)?.length, 1);
   assert.match(demoMeals, /MealTimeSelect/);
@@ -77,7 +85,7 @@ test("keeps the AI foundation evidence-first and reviewable", async () => {
   assert.match(mealTimeSelect, /nearestLocalMealTime/);
   assert.match(voiceEntry, /USDA FoodData Central SR Legacy/);
   assert.match(localModel, /parseMealTranscriptExtraction/);
-  assert.match(localModel, /new Worker/);
+  assert.match(localModelProvider, /new Worker/);
   assert.match(nutritionEstimator, /estimateLocalNutrition/);
   assert.match(nutritionEstimator, /usedDefaultPortion/);
   assert.match(nutritionReference, /usda-fdc-sr-legacy-local-v1/);

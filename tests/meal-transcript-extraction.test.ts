@@ -4,6 +4,7 @@ import {
   MealTranscriptExtractionError,
   buildMealTranscriptMessages,
   deriveMealNameFromFoods,
+  extractGroundedMealFromTranscript,
   parseMealTranscriptExtraction,
 } from "../services/meal-transcript-extraction.ts";
 import { estimateLocalNutrition } from "../services/local-nutrition-estimator.ts";
@@ -29,6 +30,41 @@ test("accepts transcript-grounded quantities for deterministic nutrition scaling
 
   assert.equal(result.mealName, "Eggs, Wheat Toast");
   assert.deepEqual(result.foods, ["two eggs", "one slice wheat toast"]);
+});
+
+test("separates multiple foods and keeps each spoken portion", () => {
+  const multiFoodTranscript = "Nine grams of brown rice and five grams of salmon";
+  const result = parseMealTranscriptExtraction(
+    '{"mealName":"Brown rice and salmon","foods":["nine grams of brown rice and five grams of salmon"]}',
+    multiFoodTranscript,
+  );
+
+  assert.equal(result.mealName, "Brown Rice, Salmon");
+  assert.deepEqual(result.foods, [
+    "nine grams of brown rice",
+    "five grams of salmon",
+  ]);
+  const nutrition = estimateLocalNutrition(result.foods);
+  assert.equal(nutrition.matchedFoodCount, 2);
+  assert.equal(nutrition.foods[0]?.estimatedGrams, 9);
+  assert.equal(nutrition.foods[1]?.estimatedGrams, 5);
+});
+
+test("uses a transcript-grounded multi-food fallback when local model output is empty", () => {
+  const result = extractGroundedMealFromTranscript(
+    "For lunch I had nine grams of brown rice, five grams of salmon, and broccoli",
+  );
+
+  assert.equal(result.mealName, "Brown Rice, Salmon, Broccoli");
+  assert.deepEqual(result.foods, [
+    "nine grams of brown rice",
+    "five grams of salmon",
+    "broccoli",
+  ]);
+  assert.deepEqual(
+    extractGroundedMealFromTranscript("I had one and a half cups of brown rice").foods,
+    ["one and a half cups of brown rice"],
+  );
 });
 
 test("accepts transcript-grounded meal details", () => {

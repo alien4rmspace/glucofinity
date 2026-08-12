@@ -1,4 +1,5 @@
 import {
+  extractGroundedMealFromTranscript,
   parseMealTranscriptExtraction,
   validateMealTranscript,
 } from "@/services/meal-transcript-extraction";
@@ -116,10 +117,25 @@ class BrowserMealLanguageProvider {
       const request = this.pending.get(message.requestId);
       if (!request) return;
       this.pending.delete(message.requestId);
+      const groundedFallback = extractGroundedMealFromTranscript(request.transcript);
       try {
-        request.resolve(parseMealTranscriptExtraction(message.output, request.transcript));
+        const modelExtraction = parseMealTranscriptExtraction(
+          message.output,
+          request.transcript,
+        );
+        request.resolve(
+          groundedFallback.foods.length > modelExtraction.foods.length
+            ? groundedFallback
+            : modelExtraction,
+        );
       } catch (error) {
-        request.reject(error instanceof Error ? error : new Error("The meal draft was invalid."));
+        if (groundedFallback.foods.length > 0) {
+          request.resolve(groundedFallback);
+        } else {
+          request.reject(
+            error instanceof Error ? error : new Error("The meal draft was invalid."),
+          );
+        }
       }
       return;
     }
