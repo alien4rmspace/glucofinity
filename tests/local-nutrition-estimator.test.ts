@@ -29,6 +29,28 @@ test("uses food-specific cup weights and fractions", () => {
   assert.equal(estimate.totals.carbohydratesGrams, 25.8);
 });
 
+test("recognizes spoken nine grams instead of assuming the default portion", () => {
+  const estimate = estimateLocalNutrition(["nine grams of brown rice"]);
+
+  assert.equal(estimate.defaultPortionCount, 0);
+  assert.equal(estimate.foods[0]?.estimatedGrams, 9);
+  assert.equal(estimate.foods[0]?.portionLabel, "9 g");
+  assert.deepEqual(estimate.totals, {
+    calories: 11,
+    carbohydratesGrams: 2.3,
+    proteinGrams: 0.2,
+    fatGrams: 0.1,
+    fiberGrams: 0.1,
+  });
+});
+
+test("recognizes compound spoken quantities", () => {
+  const estimate = estimateLocalNutrition(["twenty one grams of brown rice"]);
+
+  assert.equal(estimate.foods[0]?.estimatedGrams, 21);
+  assert.equal(estimate.foods[0]?.usedDefaultPortion, false);
+});
+
 test("uses a visibly labeled default when no portion was spoken", () => {
   const estimate = estimateLocalNutrition(["banana"]);
 
