@@ -35,9 +35,10 @@ test("exports the complete GlucoFinity prototype", async () => {
 });
 
 test("keeps the AI foundation evidence-first and reviewable", async () => {
-  const [demoMeals, demoInsights, aiPanel, aiService, visionProvider, voiceEntry, localModel, nutritionEstimator, nutritionReference] = await Promise.all([
+  const [demoMeals, demoInsights, mealAnalysis, aiPanel, aiService, visionProvider, voiceEntry, localModel, nutritionEstimator, nutritionReference] = await Promise.all([
     readFile(new URL("../components/demo/demo-meals.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/demo/demo-insights.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/sections/meal-analysis.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/demo/ai-foundation-panel.tsx", import.meta.url), "utf8"),
     readFile(new URL("../services/ai-foundation.ts", import.meta.url), "utf8"),
     readFile(new URL("../services/meal-vision-provider.ts", import.meta.url), "utf8"),
@@ -50,6 +51,10 @@ test("keeps the AI foundation evidence-first and reviewable", async () => {
   assert.match(demoMeals, /ai-estimated/);
   assert.match(demoMeals, /ai-corrected/);
   assert.match(demoMeals, /User-corrected AI estimate/);
+  assert.equal(demoMeals.match(/step="any"/g)?.length, 5);
+  assert.equal(demoMeals.match(/inputMode="decimal"/g)?.length, 5);
+  assert.match(mealAnalysis, /step="any"/);
+  assert.match(mealAnalysis, /inputMode="decimal"/);
   assert.match(demoInsights, /Evidence: n =/);
   assert.match(aiPanel, /Observed remains separate from predicted/);
   assert.match(aiPanel, /No evaluated model/);

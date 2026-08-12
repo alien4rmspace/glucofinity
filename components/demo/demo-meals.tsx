@@ -211,23 +211,23 @@ export function DemoMeals({
               </label>
               <label className="grid gap-1.5 text-sm font-semibold text-[#34495e]">
                 Estimated calories
-                <input type="number" min="0" max="10000" value={draft.calories ?? ""} onChange={(event) => updateNutritionNumber("calories", event.target.value)} className="h-11 rounded-lg border border-[#cbd8e4] bg-white px-3 font-normal text-[#0b1f33]" />
+                <input type="number" inputMode="decimal" step="any" min="0" max="10000" value={draft.calories ?? ""} onChange={(event) => updateNutritionNumber("calories", event.target.value)} className="h-11 rounded-lg border border-[#cbd8e4] bg-white px-3 font-normal text-[#0b1f33]" />
               </label>
               <label className="grid gap-1.5 text-sm font-semibold text-[#34495e]">
                 Estimated carbohydrates (g)
-                <input type="number" min="0" max="10000" value={draft.carbohydrates ?? ""} onChange={(event) => updateNutritionNumber("carbohydrates", event.target.value)} className="h-11 rounded-lg border border-[#cbd8e4] bg-white px-3 font-normal text-[#0b1f33]" />
+                <input type="number" inputMode="decimal" step="any" min="0" max="10000" value={draft.carbohydrates ?? ""} onChange={(event) => updateNutritionNumber("carbohydrates", event.target.value)} className="h-11 rounded-lg border border-[#cbd8e4] bg-white px-3 font-normal text-[#0b1f33]" />
               </label>
               <label className="grid gap-1.5 text-sm font-semibold text-[#34495e]">
                 Estimated protein (g)
-                <input type="number" min="0" max="10000" value={draft.protein ?? ""} onChange={(event) => updateNutritionNumber("protein", event.target.value)} className="h-11 rounded-lg border border-[#cbd8e4] bg-white px-3 font-normal text-[#0b1f33]" />
+                <input type="number" inputMode="decimal" step="any" min="0" max="10000" value={draft.protein ?? ""} onChange={(event) => updateNutritionNumber("protein", event.target.value)} className="h-11 rounded-lg border border-[#cbd8e4] bg-white px-3 font-normal text-[#0b1f33]" />
               </label>
               <label className="grid gap-1.5 text-sm font-semibold text-[#34495e]">
                 Estimated fat (g)
-                <input type="number" min="0" max="10000" value={draft.fat ?? ""} onChange={(event) => updateNutritionNumber("fat", event.target.value)} className="h-11 rounded-lg border border-[#cbd8e4] bg-white px-3 font-normal text-[#0b1f33]" />
+                <input type="number" inputMode="decimal" step="any" min="0" max="10000" value={draft.fat ?? ""} onChange={(event) => updateNutritionNumber("fat", event.target.value)} className="h-11 rounded-lg border border-[#cbd8e4] bg-white px-3 font-normal text-[#0b1f33]" />
               </label>
               <label className="grid gap-1.5 text-sm font-semibold text-[#34495e]">
                 Estimated fiber (g)
-                <input type="number" min="0" max="10000" value={draft.fiber ?? ""} onChange={(event) => updateNutritionNumber("fiber", event.target.value)} className="h-11 rounded-lg border border-[#cbd8e4] bg-white px-3 font-normal text-[#0b1f33]" />
+                <input type="number" inputMode="decimal" step="any" min="0" max="10000" value={draft.fiber ?? ""} onChange={(event) => updateNutritionNumber("fiber", event.target.value)} className="h-11 rounded-lg border border-[#cbd8e4] bg-white px-3 font-normal text-[#0b1f33]" />
               </label>
               <label className="grid gap-1.5 text-sm font-semibold text-[#34495e] sm:col-span-2">
                 Notes
