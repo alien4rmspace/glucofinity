@@ -71,8 +71,12 @@ test("keeps the AI foundation evidence-first and reviewable", async () => {
   assert.match(voiceEntry, /Edit nutrition/);
   assert.match(voiceEntry, /Edit ingredient/);
   assert.match(voiceEntry, /Closest foods in the local reference/);
+  assert.match(voiceEntry, /Closest food-family options/);
+  assert.match(voiceEntry, /Closest available options/);
+  assert.match(voiceEntry, /Related food family/);
+  assert.match(voiceEntry, /Broader local option/);
   assert.match(voiceEntry, /Update ingredient/);
-  assert.match(voiceEntry, /not automatic substitutions/);
+  assert.match(voiceEntry, /not equivalents or automatic/);
   assert.match(voiceEntry, /Continue in full form/);
   assert.match(voiceEntry, /Add to session/);
   assert.match(voiceEntry, /Press once to start recording/);

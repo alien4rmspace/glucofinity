@@ -106,6 +106,27 @@ test("suggests a close local food for a speech-recognition typo", () => {
   assert.equal(suggestion?.suggestedInput, "20 grams of salmon");
 });
 
+test("returns food-family suggestions when an unmatched food has no close text match", () => {
+  const suggestions = findLocalNutritionSuggestions("a cup of lettuce");
+
+  assert.deepEqual(
+    suggestions.map(({ name, matchBasis }) => ({ name, matchBasis })),
+    [
+      { name: "Raw spinach", matchBasis: "food-family" },
+      { name: "Cooked mixed vegetables", matchBasis: "food-family" },
+      { name: "Cooked broccoli", matchBasis: "food-family" },
+    ],
+  );
+  assert.equal(suggestions[0]?.suggestedInput, "a cup of spinach");
+});
+
+test("returns labeled available options for every other named unmatched food", () => {
+  const suggestions = findLocalNutritionSuggestions("one cup of zzzzzz");
+
+  assert.equal(suggestions.length, 3);
+  assert.ok(suggestions.every(({ matchBasis }) => matchBasis === "available-option"));
+});
+
 test("splits editable food descriptions without empty rows", () => {
   assert.deepEqual(
     splitFoodDescriptions("two eggs, one slice wheat toast\n half an avocado; "),
