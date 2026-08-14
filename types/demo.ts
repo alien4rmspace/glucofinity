@@ -2,6 +2,26 @@ import type { NutritionEstimateSource } from "@/types/ai";
 
 export type DemoTab = "dashboard" | "meals" | "trends" | "insights" | "settings";
 
+export type DemoFitnessPreviewState =
+  | "not-selected"
+  | "records"
+  | "empty"
+  | "unavailable";
+
+export type DemoFitnessWorkout = {
+  id: string;
+  activityType: string;
+  startTime: string;
+  durationMinutes: number;
+  sourceName: string;
+};
+
+export type DemoFitnessSummary = {
+  stepCount: number;
+  activeEnergyKilocalories: number;
+  workouts: DemoFitnessWorkout[];
+};
+
 export type DemoMeal = {
   id: string;
   timestamp: string;
@@ -28,6 +48,7 @@ export type DemoMeal = {
 
 export type DemoSettings = {
   showMockData: boolean;
+  fitnessPreviewState: DemoFitnessPreviewState;
   targetLow: number;
   targetHigh: number;
 };

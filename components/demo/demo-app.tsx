@@ -72,7 +72,7 @@ export function DemoApp() {
       </aside>
 
       <section id="demo-panel" aria-labelledby={`demo-tab-${activeTab}`} className="min-w-0">
-        {activeTab === "dashboard" ? <DemoDashboard settings={settings} mealCount={meals.length} onNavigate={navigate} /> : null}
+        {activeTab === "dashboard" ? <DemoDashboard settings={settings} mealCount={meals.length} onNavigate={navigate} onSettingsChange={setSettings} /> : null}
         {activeTab === "meals" ? <DemoMeals meals={meals} settings={settings} onAddMeal={addMeal} onDeleteMeal={(id) => setMeals((current) => current.filter((meal) => meal.id !== id))} /> : null}
         {activeTab === "trends" ? <DemoTrends settings={settings} meals={meals} onNavigate={navigate} /> : null}
         {activeTab === "insights" ? <DemoInsights settings={settings} meals={meals} onNavigate={navigate} /> : null}

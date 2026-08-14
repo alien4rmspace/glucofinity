@@ -4,7 +4,7 @@ import { Activity, ArrowRight, BrainCircuit, ClipboardPlus, DatabaseZap, Lightbu
 import { SectionHeading } from "@/components/ui/section-heading";
 
 const steps = [
-  { number: "01", title: "Connect health data", description: "Bring permitted glucose and health records into one timeline.", icon: DatabaseZap },
+  { number: "01", title: "Connect health data", description: "Choose permitted blood glucose and fitness records in the native mobile prototype.", icon: DatabaseZap },
   { number: "02", title: "Log meals and events", description: "Add meals, medication, sleep, activity, and useful notes.", icon: ClipboardPlus },
   { number: "03", title: "Analyze responses", description: "Compare timing, magnitude, and repeated glucose patterns.", icon: BrainCircuit },
   { number: "04", title: "Discover patterns", description: "Review cautious summaries with the source context attached.", icon: Lightbulb },

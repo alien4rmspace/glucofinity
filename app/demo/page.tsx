@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowLeft, FlaskConical } from "lucide-react";
 import { DemoApp } from "@/components/demo/demo-app";
 import { Brand } from "@/components/ui/brand";
+import { mobileAppRelease } from "@/data/demo-data";
 
 export const metadata: Metadata = {
   title: "Interactive Demo | GlucoFinity",
@@ -23,7 +24,7 @@ export default function DemoPage() {
             <Brand compact />
           </div>
           <div className="inline-flex items-center gap-2 rounded-full border border-[#cddceb] bg-[#f7fafc] px-3 py-1.5 text-xs font-semibold text-[#31506f]">
-            <FlaskConical className="size-3.5 text-[#1268e8]" aria-hidden="true" /> Interactive educational prototype
+            <FlaskConical className="size-3.5 text-[#1268e8]" aria-hidden="true" /> {`App UI preview · v${mobileAppRelease.version}`}
           </div>
         </div>
       </header>

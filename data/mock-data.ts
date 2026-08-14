@@ -57,7 +57,7 @@ export const features: Feature[] = [
   { title: "AI-assisted meal recognition", description: "Turn meal photos into reviewable food, serving, and carbohydrate estimates.", icon: "scan" },
   { title: "Prediction architecture", description: "Prepare traceable estimated responses once a model has enough authorized data and measured evaluation.", icon: "chart" },
   { title: "Lifestyle pattern discovery", description: "Compare glucose with meals, movement, sleep, and other daily context.", icon: "sparkles" },
-  { title: "Sleep and activity context", description: "Place morning and post-meal readings alongside rest and exercise events.", icon: "moon" },
+  { title: "Apple Health fitness context", description: "The iOS prototype reads permitted steps, active energy, and workouts; this site previews the UI with fictional records.", icon: "activity" },
   { title: "Medication logging", description: "Record medication events as context without recommending dose changes.", icon: "pill" },
   { title: "Historical summaries", description: "Review repeated responses and longer-term changes across days and weeks.", icon: "history" },
   { title: "Privacy-focused handling", description: "Designed around purposeful access, clear consent, and data minimization.", icon: "lock" },

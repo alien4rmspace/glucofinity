@@ -154,11 +154,38 @@ test("exports the dedicated interactive demo route", async () => {
 
   assert.match(homeHtml, /href="\/glucofinity\/demo\/"/);
   assert.match(demoHtml, /<title>Interactive Demo \| GlucoFinity<\/title>/i);
-  assert.match(demoHtml, /Interactive educational prototype/);
+  assert.match(demoHtml, /App UI preview · v1\.2\.0/);
   assert.match(demoHtml, /Your fictional day at a glance/);
   assert.match(demoHtml, /normalized fictional examples with source provenance/i);
   assert.match(demoHtml, /Review meal response metrics/i);
   assert.match(demoHtml, /All readings, meals, calculations, and observations are fictional/i);
   assert.match(demoHtml, /Not for diagnosis, treatment, medication, or insulin decisions/i);
   assert.doesNotMatch(demoHtml, /connected to a real sensor/i);
+});
+
+test("mirrors the mobile fitness context with explicit fictional UI states", async () => {
+  const [demoHtml, dashboard, fitnessSummary, settings, demoData] = await Promise.all([
+    readFile(exportedDemoPage, "utf8"),
+    readFile(new URL("../components/demo/demo-dashboard.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/demo/demo-fitness-summary.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/demo/demo-settings.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../data/demo-data.ts", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(demoHtml, /App UI preview · v1\.2\.0/);
+  assert.match(demoHtml, /Today’s fitness context/);
+  assert.match(demoHtml, /Fictional UI preview/);
+  assert.match(demoHtml, /Website preview only/);
+  assert.match(demoHtml, /5,432/);
+  assert.match(dashboard, /No glucose source selected/);
+  assert.match(dashboard, /Connect Apple Health/);
+  assert.match(fitnessSummary, /No permitted fitness records today/);
+  assert.match(fitnessSummary, /HealthKit does not let the app distinguish/);
+  assert.match(settings, /Mobile fitness UI testing/);
+  assert.match(settings, /Apple Health fitness preview state/);
+  assert.match(settings, /Unavailable on web/);
+  assert.match(settings, /Source build/);
+  assert.match(demoData, /fitnessPreviewState: "records"/);
+  assert.match(demoData, /Fictional Apple Watch/);
+  assert.doesNotMatch(fitnessSummary, /diagnos|treat|recommend insulin/i);
 });

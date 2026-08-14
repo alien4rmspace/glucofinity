@@ -92,12 +92,16 @@ The page demonstrates these concepts without claiming they are completed product
 - A post-meal glucose response view
 - A meal-centered response window with baseline, peak, rise, timing, 1-hour and 2-hour values, incremental area, return-near-baseline timing, and explicit data-quality states
 - Stable mock-source provenance and visible gaps when surrounding readings are incomplete
+- A browser-only preview of the mobile Apple Health fitness interface with deterministic
+  fictional step, active-energy, and workout records plus not-selected, empty, and
+  unavailable states for responsive UI testing
 - Deterministic, versioned feature previews that leave unavailable context missing
 - Explicit fictional training eligibility based on meal-response coverage
 - Evidence-backed pattern summaries with sample sizes and cautious correlation language
 - Separate model responsibilities for meal vision, XGBoost-style tabular prediction,
   continuous time-series forecasting, deterministic statistics, and explanation
-- Planned CGM and Apple Health integrations
+- Implemented read-only Apple Health blood-glucose and fitness boundaries in the separate
+  iOS app; this static site previews those states but cannot access HealthKit
 - Planned time-series, XGBoost-style, vision-language, and local language-model responsibilities
 - Privacy-focused product principles
 
@@ -133,7 +137,8 @@ demo are architecture/readiness states rather than performance claims.
 
 1. Conduct user research with patients and licensed healthcare professionals.
 2. Define consent, data minimization, access, retention, and deletion requirements.
-3. Prototype secure, permission-based CGM and Apple Health import flows.
+3. Validate the implemented Apple Health boundary on a signed iPhone build and prototype
+   any future direct CGM connection with explicit consent and data minimization.
 4. Add authenticated user accounts and encrypted storage only after a privacy and threat-model review.
 5. Evaluate meal-estimation and pattern-analysis models against representative datasets.
 6. Perform accessibility, usability, clinical-safety, privacy, and security validation.

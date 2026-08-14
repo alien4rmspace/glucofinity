@@ -1,10 +1,17 @@
 "use client";
 
-import { Database, HeartPulse, Info, RotateCcw, ShieldCheck } from "lucide-react";
+import { Activity, Database, HeartPulse, Info, RotateCcw, ShieldCheck, Smartphone } from "lucide-react";
 import { type FormEvent, useState } from "react";
 import { DemoCard, DemoNotice, DemoSectionHeading } from "@/components/demo/demo-ui";
-import { defaultDemoSettings } from "@/data/demo-data";
-import type { DemoSettings } from "@/types/demo";
+import { defaultDemoSettings, mobileAppRelease } from "@/data/demo-data";
+import type { DemoFitnessPreviewState, DemoSettings } from "@/types/demo";
+
+const fitnessPreviewOptions = [
+  { value: "records", label: "Fictional records available" },
+  { value: "empty", label: "No permitted records" },
+  { value: "unavailable", label: "Loading unavailable" },
+  { value: "not-selected", label: "Apple Health not selected" },
+] satisfies readonly { value: DemoFitnessPreviewState; label: string }[];
 
 export function DemoSettingsPanel({
   settings,
@@ -54,15 +61,15 @@ export function DemoSettingsPanel({
           <div className="flex items-start gap-4 p-5 sm:p-6">
             <span className="grid size-11 shrink-0 place-items-center rounded-full bg-[#e5f8fb] text-[#147b8c]"><Database className="size-5" aria-hidden="true" /></span>
             <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-semibold text-[#0b1f33]">Deterministic demo readings</h3><span className="text-xs font-semibold text-[#087f6a]">Active in this demo</span></div>
+              <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-semibold text-[#0b1f33]">Deterministic demo readings</h3><span className="text-xs font-semibold text-[#087f6a]">Available in this demo</span></div>
               <p className="mt-2 text-sm leading-6 text-[#64768a]">Normalized fictional mg/dL samples retain a mock source label, stable source-record ID, timestamp, and generator name. They never leave this static site.</p>
             </div>
           </div>
           <div className="flex items-start gap-4 p-5 sm:p-6">
             <span className="grid size-11 shrink-0 place-items-center rounded-full bg-[#fff1f1] text-[#b33f3f]"><HeartPulse className="size-5" aria-hidden="true" /></span>
             <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-semibold text-[#0b1f33]">Apple Health</h3><span className="text-xs font-semibold text-[#b33f3f]">Not connected</span></div>
-              <p className="mt-2 text-sm leading-6 text-[#64768a]">HealthKit requires native permissions and an iOS build. It is not available in this static website or standard Expo Go.</p>
+              <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-semibold text-[#0b1f33]">Apple Health</h3><span className="text-xs font-semibold text-[#b33f3f]">Unavailable on web</span></div>
+              <p className="mt-2 text-sm leading-6 text-[#64768a]">The iOS app requests read-only access to blood glucose, step count, active energy, and workout records. HealthKit requires native permissions and is not available in this static website or standard Expo Go.</p>
               <button type="button" disabled className="mt-4 h-10 cursor-not-allowed rounded-lg border border-[#dce5ee] bg-[#f7fafc] px-4 text-xs font-semibold text-[#8a9aac]">Connect Apple Health — unavailable</button>
             </div>
           </div>
@@ -89,8 +96,34 @@ export function DemoSettingsPanel({
         </DemoCard>
       </section>
 
+      <section className="grid gap-4" aria-labelledby="fitness-preview-heading">
+        <DemoSectionHeading
+          id="fitness-preview-heading"
+          title="Mobile fitness UI testing"
+          description="Choose a deterministic browser-only state, then return to Dashboard to review the corresponding app interface."
+        />
+        <DemoCard className="p-5 sm:p-6">
+          <label className="flex flex-col gap-3 text-sm font-semibold text-[#34495e] sm:flex-row sm:items-center">
+            <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-[#f0edff] text-[#7257d9]"><Activity className="size-5" aria-hidden="true" /></span>
+            <span className="min-w-0 flex-1">
+              <span className="block font-semibold text-[#0b1f33]">Apple Health fitness preview state</span>
+              <span className="mt-1 block text-xs font-normal leading-5 text-[#64768a]">This changes fictional interface state only and never requests health data.</span>
+            </span>
+            <select
+              value={settings.fitnessPreviewState}
+              onChange={(event) => onChange({ ...settings, fitnessPreviewState: event.target.value as DemoFitnessPreviewState })}
+              className="h-11 min-w-0 rounded-lg border border-[#cbd8e4] bg-white px-3 font-normal text-[#0b1f33] sm:w-64"
+            >
+              {fitnessPreviewOptions.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </label>
+        </DemoCard>
+      </section>
+
       <section className="grid gap-4" aria-labelledby="prototype-data-heading">
-        <DemoSectionHeading id="prototype-data-heading" title="Prototype data" />
+        <DemoSectionHeading id="prototype-data-heading" title="Optional testing data" />
         <DemoCard className="p-5 sm:p-6">
           <label className="flex cursor-pointer items-center gap-4">
             <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-[#e5f8fb] text-[#147b8c]"><Database className="size-5" aria-hidden="true" /></span>
@@ -101,7 +134,7 @@ export function DemoSettingsPanel({
       </section>
 
       <DemoNotice icon={<Info className="size-5" />} title="Data and privacy" tone="purple">
-        Session meal entries and display preferences stay in this open browser tab and reset on refresh. Do not enter real personal health information into this public prototype.
+        Session meal entries and display preferences stay in this open browser tab and reset on refresh. The fitness preview uses only bundled fictional values. Do not enter real personal health information into this public prototype.
       </DemoNotice>
 
       <section className="grid gap-4" aria-labelledby="safety-settings-heading">
@@ -114,6 +147,20 @@ export function DemoSettingsPanel({
           <div className="mt-5 border-t border-[#e4ebf2] pt-5">
             <button type="button" onClick={confirmReset} className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-[#e5c8c8] px-4 text-sm font-semibold text-[#a43b3b] hover:bg-[#fff1f1]"><RotateCcw className="size-4" aria-hidden="true" />Reset interactive demo</button>
           </div>
+        </DemoCard>
+      </section>
+
+      <section className="grid gap-4" aria-labelledby="about-heading">
+        <DemoSectionHeading id="about-heading" title="About" />
+        <DemoCard className="p-5 sm:p-6">
+          <div className="flex items-center gap-3 border-b border-[#e4ebf2] pb-4">
+            <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-[#edf5ff] text-[#1268e8]"><Smartphone className="size-5" aria-hidden="true" /></span>
+            <div><h3 className="font-semibold text-[#0b1f33]">GlucoFinity mobile UI reference</h3><p className="mt-1 text-xs text-[#718096]">Checked-in app configuration represented by this demo</p></div>
+          </div>
+          <dl className="divide-y divide-[#e4ebf2]">
+            <div className="flex items-center justify-between gap-4 py-4"><dt className="font-semibold text-[#0b1f33]">Version</dt><dd className="text-sm text-[#64768a]">{mobileAppRelease.version}</dd></div>
+            <div className="flex items-center justify-between gap-4 pt-4"><dt className="font-semibold text-[#0b1f33]">Source build</dt><dd className="text-sm text-[#64768a]">{mobileAppRelease.sourceBuild}</dd></div>
+          </dl>
         </DemoCard>
       </section>
     </div>

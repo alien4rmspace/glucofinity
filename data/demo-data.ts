@@ -1,4 +1,4 @@
-import type { DemoMeal, DemoSettings } from "@/types/demo";
+import type { DemoFitnessSummary, DemoMeal, DemoSettings } from "@/types/demo";
 import type { DemoGlucoseReading } from "@/types/glucose";
 
 const MINUTE_MS = 60_000;
@@ -108,6 +108,33 @@ export const demoGlucoseReadings: DemoGlucoseReading[] = responseProfiles
 
 export const defaultDemoSettings: DemoSettings = {
   showMockData: true,
+  fitnessPreviewState: "records",
   targetLow: 70,
   targetHigh: 180,
+};
+
+export const mobileAppRelease = {
+  version: "1.2.0",
+  sourceBuild: "4",
+} as const;
+
+export const demoFitnessSummary: DemoFitnessSummary = {
+  stepCount: 5_432,
+  activeEnergyKilocalories: 321.5,
+  workouts: [
+    {
+      id: "fictional-workout-walk",
+      activityType: "Walking",
+      startTime: "8:15 AM",
+      durationMinutes: 30,
+      sourceName: "Fictional Apple Watch",
+    },
+    {
+      id: "fictional-workout-strength",
+      activityType: "Functional strength training",
+      startTime: "5:30 PM",
+      durationMinutes: 30,
+      sourceName: "Fictional fitness source",
+    },
+  ],
 };
