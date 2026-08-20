@@ -4,6 +4,8 @@ import test from "node:test";
 
 const exportedPage = new URL("../out/index.html", import.meta.url);
 const exportedDemoPage = new URL("../out/demo/index.html", import.meta.url);
+const exportedPrivacyPage = new URL("../out/privacy/index.html", import.meta.url);
+const exportedSupportPage = new URL("../out/support/index.html", import.meta.url);
 
 async function readExport() {
   return readFile(exportedPage, "utf8");
@@ -28,10 +30,34 @@ test("exports the complete GlucoFinity prototype", async () => {
   assert.match(html, /glucofinity-lockup-transparent\.[a-z0-9_]+\.png/);
   assert.match(html, /glucofinity-mark-transparent\.[a-z0-9_]+\.png/);
   assert.match(html, /educational and informational prototype/i);
+  assert.match(html, /href="\/glucofinity\/privacy\/"/);
+  assert.match(html, /href="\/glucofinity\/support\/"/);
   assert.doesNotMatch(
     html,
     /codex-preview|Your site is taking shape|react-loading-skeleton/i,
   );
+});
+
+test("exports complete privacy and support routes", async () => {
+  const [privacyHtml, supportHtml] = await Promise.all([
+    readFile(exportedPrivacyPage, "utf8"),
+    readFile(exportedSupportPage, "utf8"),
+  ]);
+
+  assert.match(privacyHtml, /<title>Privacy Policy \| GlucoFinity<\/title>/i);
+  assert.match(privacyHtml, /read-only access to blood glucose, step count/i);
+  assert.match(privacyHtml, /does not sell personal information/i);
+  assert.match(privacyHtml, /on-device speech recognizer/i);
+  assert.match(privacyHtml, /Reset local app data/i);
+  assert.match(privacyHtml, /href="\/glucofinity\/support\/"/);
+  assert.doesNotMatch(privacyHtml, /future product/i);
+
+  assert.match(supportHtml, /<title>Support \| GlucoFinity<\/title>/i);
+  assert.match(supportHtml, /Not for urgent or medical support/i);
+  assert.match(supportHtml, /Open a support request/i);
+  assert.match(supportHtml, /Do not post glucose readings/i);
+  assert.match(supportHtml, /github\.com\/alien4rmspace\/glucofinity\/issues\/new/i);
+  assert.match(supportHtml, /href="\/glucofinity\/privacy\/"/);
 });
 
 test("keeps the AI foundation evidence-first and reviewable", async () => {

@@ -31,9 +31,15 @@ export default function DemoPage() {
         <DemoApp />
       </main>
       <footer className="border-t border-[#dce5ee] bg-white">
-        <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-8 text-xs leading-5 text-[#64768a] sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
-          <p>All readings, meals, calculations, and observations are fictional prototype content.</p>
-          <p>Not for diagnosis, treatment, medication, or insulin decisions.</p>
+        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-8 text-xs leading-5 text-[#64768a] sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
+          <div>
+            <p>All readings, meals, calculations, and observations are fictional prototype content.</p>
+            <p>Not for diagnosis, treatment, medication, or insulin decisions.</p>
+          </div>
+          <nav aria-label="Demo footer navigation" className="flex gap-5 font-semibold">
+            <Link href="/privacy" className="hover:text-[#1268e8]">Privacy</Link>
+            <Link href="/support" className="hover:text-[#1268e8]">Support</Link>
+          </nav>
         </div>
       </footer>
     </div>
