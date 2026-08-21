@@ -31,6 +31,19 @@ npm run dev
 
 Open the local URL printed by Next.js.
 
+## Mobile app source
+
+The current Expo/React Native application source is available separately in
+[`mobile-app/`](./mobile-app/). It includes the iOS on-device voice modules,
+Apple Health and Android Health Connect integrations, local meal and medication
+logging, the bundled core nutrition catalog, product scanning, deterministic
+analysis services, and app tests.
+
+To run the mobile project, follow [`mobile-app/README.md`](./mobile-app/README.md).
+Local environment files, downloaded language models, the optional full USDA branded
+catalog, dependencies, generated native projects, build output, and signing files are
+intentionally excluded from source control.
+
 ## Validate and build
 
 ```bash
@@ -63,6 +76,7 @@ data/                   Deterministic fictional glucose and product data
 types/                  Shared TypeScript data models
 public/                 Static assets, including the social preview image
 tests/                  Static-export smoke tests
+mobile-app/             Expo/React Native application source and tests
 .github/workflows/      GitHub Pages build and deployment workflow
 ```
 

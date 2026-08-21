@@ -1,0 +1,30 @@
+{
+  "modelId": "personalized-meal-response",
+  "modelType": "xgboost-tabular-regression",
+  "version": "0.1.0",
+  "featureVersion": "meal-prediction-features-v1",
+  "randomSeed": 20260811,
+  "minimumTrainingSamplesPerTarget": 30,
+  "split": {
+    "training": 0.7,
+    "validation": 0.15,
+    "testing": 0.15
+  },
+  "targets": [
+    "glucoseRiseMgDl",
+    "peakGlucoseMgDl",
+    "timeToPeakMinutes",
+    "glucoseAt120MinutesMgDl",
+    "incrementalAuc"
+  ],
+  "xgboost": {
+    "objective": "reg:squarederror",
+    "n_estimators": 250,
+    "max_depth": 4,
+    "learning_rate": 0.04,
+    "subsample": 0.8,
+    "colsample_bytree": 0.8,
+    "reg_lambda": 1.0,
+    "n_jobs": 1
+  }
+}

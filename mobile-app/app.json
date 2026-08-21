@@ -1,0 +1,120 @@
+{
+  "expo": {
+    "name": "GlucoFinity",
+    "slug": "GlucoFinity",
+    "version": "1.2.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "glucofinity",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "ios": {
+      "bundleIdentifier": "com.glucofinity.app",
+      "buildNumber": "4",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSHealthShareUsageDescription": "GlucoFinity uses HealthKit access to organize blood glucose, step count, active energy, and workout records you choose to share for local, educational review. The app does not add or change Apple Health data.",
+        "NSHealthUpdateUsageDescription": "GlucoFinity uses HealthKit access to organize blood glucose, step count, active energy, and workout records you choose to share for local, educational review. The app does not add or change Apple Health data.",
+        "NSMicrophoneUsageDescription": "GlucoFinity records a meal description only when you start voice entry so Apple can transcribe it on this device.",
+        "NSSpeechRecognitionUsageDescription": "GlucoFinity uses Apple on-device speech recognition to transcribe meal descriptions you choose to record."
+      },
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.glucofinity.app",
+      "versionCode": 4,
+      "softwareKeyboardLayoutMode": "resize",
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO"
+      ],
+      "permissions": [
+        "android.permission.health.READ_BLOOD_GLUCOSE"
+      ],
+      "adaptiveIcon": {
+        "backgroundColor": "#F4F7FA",
+        "foregroundImage": "./assets/images/android-icon-foreground.png"
+      },
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow GlucoFinity to attach a photo to a meal stored locally on this device.",
+          "cameraPermission": "Allow GlucoFinity to scan a product barcode or take a meal photo. Barcode images are processed on this device; meal photos are stored locally.",
+          "microphonePermission": "Allow GlucoFinity to record a meal description for on-device transcription."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow GlucoFinity to scan a product barcode or take a meal photo. Barcode images are processed on this device; meal photos are stored locally.",
+          "microphonePermission": "Allow GlucoFinity to record a meal description for on-device transcription.",
+          "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#F4F7FA"
+        }
+      ],
+      "react-native-health-connect",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "deploymentTarget": "17.0"
+          },
+          "android": {
+            "compileSdkVersion": 36,
+            "targetSdkVersion": 36,
+            "minSdkVersion": 26
+          }
+        }
+      ],
+      [
+        "@kingstinct/react-native-healthkit",
+        {
+          "NSHealthShareUsageDescription": "GlucoFinity uses HealthKit access to organize blood glucose, step count, active energy, and workout records you choose to share for local, educational review. The app does not add or change Apple Health data.",
+          "NSHealthUpdateUsageDescription": "GlucoFinity uses HealthKit access to organize blood glucose, step count, active energy, and workout records you choose to share for local, educational review. The app does not add or change Apple Health data.",
+          "background": false
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Allow GlucoFinity to record a meal description for on-device transcription.",
+          "recordAudioAndroid": false
+        }
+      ],
+      "expo-asset",
+      [
+        "expo-sqlite",
+        {
+          "enableFTS": true
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "0e8e4600-304f-4eb8-a9b6-4c6427981b8b"
+      }
+    },
+    "owner": "glucofinity"
+  }
+}

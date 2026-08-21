@@ -1,0 +1,11 @@
+{
+  "name": "glucofinity-speech",
+  "version": "1.0.0",
+  "description": "GlucoFinity Apple on-device speech transcription bridge",
+  "main": "index.ts",
+  "private": true,
+  "license": "MIT",
+  "peerDependencies": {
+    "expo": "*"
+  }
+}
