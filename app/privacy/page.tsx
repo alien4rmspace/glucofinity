@@ -14,7 +14,7 @@ export default function PrivacyPolicyPage() {
       eyebrow="Privacy"
       title="Privacy Policy"
       intro="GlucoFinity is designed around local processing, limited permissions, and user control. This policy explains what the mobile app and website access and how that information is handled."
-      updated="August 19, 2026"
+      updated="August 20, 2026"
     >
       <section>
         <h2>Summary</h2>
@@ -165,8 +165,9 @@ export default function PrivacyPolicyPage() {
       <section>
         <h2>Contact</h2>
         <p>
-          GlucoFinity is developed by Damian Saelee as an educational university project. For
-          privacy questions or app support, visit the <Link href="/support">GlucoFinity Support page</Link>.
+          GlucoFinity is developed by Damian Saelee in collaboration with Mark Betts and Chloe
+          Wong as an educational university project. For privacy questions or app support, visit
+          the <Link href="/support">GlucoFinity Support page</Link>.
           Do not include personal health information in a public support request.
         </p>
       </section>
