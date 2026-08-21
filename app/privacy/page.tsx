@@ -165,9 +165,10 @@ export default function PrivacyPolicyPage() {
       <section>
         <h2>Contact</h2>
         <p>
-          GlucoFinity is developed by Damian Saelee in collaboration with Mark Betts and Chloe
-          Wong as an educational university project. For privacy questions or app support, visit
-          the <Link href="/support">GlucoFinity Support page</Link>.
+          GlucoFinity is developed by Damian Saelee in collaboration with Mark Betts, a
+          bioengineering student, and Chloe Wong, a pharmacy student, as an educational
+          university project. For privacy questions or app support, visit the
+          <Link href="/support">GlucoFinity Support page</Link>.
           Do not include personal health information in a public support request.
         </p>
       </section>
